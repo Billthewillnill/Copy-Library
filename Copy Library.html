@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Copy Library</title>
+  <!-- Load Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Load Inter & JetBrains Mono fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          },
+        },
+      },
+    };
+
+    // Apply saved theme (or system preference) before first paint to prevent flashing
+    (function () {
+      try {
+        const savedTheme = window.localStorage.getItem('copyLibrary_theme_v1');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) {
+        // Ignore storage access errors
+      }
+    })();
+  </script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans antialiased min-h-screen overflow-x-hidden selection:bg-indigo-100 dark:selection:bg-indigo-500/30 selection:text-indigo-900 dark:selection:text-indigo-200 transition-colors duration-200">
+
+  <!-- Top Navigation & Tabs Header -->
+  <header class="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors duration-200">
+    <div class="max-w-4xl mx-auto px-3 sm:px-6 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+      <!-- Brand / App Title -->
+      <div class="flex items-center gap-2.5 order-1">
+        <div class="w-8 h-8 rounded-xl bg-slate-900 dark:bg-indigo-500 text-white flex items-center justify-center shadow-sm shrink-0">
+          <!-- Clipboard Icon -->
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+          </svg>
+        </div>
+        <h1 class="text-base sm:text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Copy Library</h1>
+      </div>
+
+      <!-- Two-Tab Segmented Switcher -->
+      <nav class="flex bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl w-full sm:w-auto order-3 sm:order-2" role="tablist" aria-label="Main views">
+        <button
+          id="tabBtnLibrary"
+          role="tab"
+          aria-selected="true"
+          aria-controls="panelLibrary"
+          class="flex-1 sm:flex-initial px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 flex items-center justify-center gap-2 min-h-[40px]"
+        >
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          <span>Copy / Paste Library</span>
+        </button>
+        <button
+          id="tabBtnData"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panelData"
+          class="flex-1 sm:flex-initial px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 flex items-center justify-center gap-2 min-h-[40px]"
+        >
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <span>Text Data</span>
+        </button>
+      </nav>
+
+      <!-- Right Controls: Mobile Save Indicator & Theme Toggle -->
+      <div class="flex items-center gap-2 order-2 sm:order-3">
+        <span id="mobileSaveBadge" class="sm:hidden text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/70 px-2.5 py-1 rounded-full opacity-0 transition-opacity duration-300">Saved</span>
+        <button
+          id="themeToggleBtn"
+          type="button"
+          aria-label="Switch to dark mode"
+          title="Toggle dark mode"
+          class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-amber-300 hover:bg-slate-200/80 dark:hover:bg-slate-700 active:scale-[0.96] transition-all flex items-center justify-center shrink-0"
+        >
+          <!-- Moon Icon (shown in light mode) -->
+          <svg id="themeIconMoon" class="w-4 h-4 block dark:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+          <!-- Sun Icon (shown in dark mode) -->
+          <svg id="themeIconSun" class="w-4 h-4 hidden dark:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-4xl mx-auto px-3 sm:px-6 py-5 sm:py-7 pb-20">
+
+    <!-- ========================================================= -->
+    <!-- TAB 1: COPY / PASTE LIBRARY                               -->
+    <!-- ========================================================= -->
+    <section id="panelLibrary" role="tabpanel" aria-labelledby="tabBtnLibrary" class="space-y-5">
+
+      <!-- Search & Folder Controls Bar -->
+      <div class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+        <div class="relative flex-1">
+          <svg class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            id="searchInput"
+            type="text"
+            placeholder="Search titles, descriptions, text, or folders..."
+            class="w-full pl-10 pr-9 py-2.5 text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 dark:focus:border-indigo-400 transition-all"
+          />
+          <button
+            id="clearSearchBtn"
+            type="button"
+            aria-label="Clear search"
+            class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            id="toggleAllFoldersBtn"
+            type="button"
+            class="flex-1 sm:flex-initial px-3.5 py-2.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-[0.99] transition-all shadow-sm min-h-[42px]"
+          >
+            Collapse All
+          </button>
+        </div>
+      </div>
+
+      <!-- Top-Level Custom Link Buttons Container -->
+      <div id="rootButtonsContainer" class="hidden">
+        <div class="flex flex-wrap gap-2" id="rootButtonsList"></div>
+      </div>
+
+      <!-- Top-Level Copy Items (if any exist outside folders) -->
+      <div id="rootItemsContainer" class="hidden space-y-2.5"></div>
+
+      <!-- Nested Folders Tree Container -->
+      <div id="foldersContainer" class="space-y-3"></div>
+
+      <!-- Empty State -->
+      <div id="emptyLibraryState" class="hidden text-center py-14 px-6 bg-white dark:bg-slate-900/60 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">
+        <div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+        </div>
+        <h2 id="emptyStateTitle" class="text-base font-semibold text-slate-800 dark:text-slate-100">Your library is empty</h2>
+        <p id="emptyStateDesc" class="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">Open the Text Data tab to add folders, copy blocks, and custom buttons.</p>
+        <button
+          id="goToDataTabBtn"
+          type="button"
+          class="mt-4 px-4 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 rounded-xl transition-colors"
+        >
+          Open Text Data
+        </button>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- TAB 2: TEXT DATA EDITOR & FORMATTING DOCUMENTATION        -->
+    <!-- ========================================================= -->
+    <section id="panelData" role="tabpanel" aria-labelledby="tabBtnData" class="hidden space-y-4">
+
+      <!-- Collapsible Formatting Guide (Title next to a little down arrow) -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+        <button
+          id="docsToggleBtn"
+          type="button"
+          aria-expanded="false"
+          aria-controls="docsContent"
+          class="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition-colors min-h-[48px]"
+        >
+          <div class="flex items-center gap-2.5">
+            <span class="text-sm font-semibold text-slate-800 dark:text-slate-100">Formatting Guide</span>
+            <!-- Little Down Arrow right next to the title -->
+            <svg
+              id="docsChevron"
+              class="w-4 h-4 text-slate-500 dark:text-slate-400 transition-transform duration-200"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+          <span class="text-xs text-slate-400 dark:text-slate-500 hidden sm:inline">How to structure folders, items &amp; buttons</span>
+        </button>
+
+        <!-- Documentation Body -->
+        <div id="docsContent" class="hidden border-t border-slate-100 dark:border-slate-800 px-4 py-4 bg-slate-50/50 dark:bg-slate-950/50 space-y-4 text-sm text-slate-600 dark:text-slate-300">
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            Everything in your library is stored as simple plain text below. You can copy and paste this entire text anywhere to back it up or edit it externally. Changes save automatically.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <!-- Folders Documentation -->
+            <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
+              <div class="font-semibold text-slate-800 dark:text-slate-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                Folders &amp; Subfolders
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Use <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-700 dark:text-slate-200">#</code> for a folder. Add more <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-700 dark:text-slate-200">#</code> signs to nest folders inside folders.</p>
+              <pre class="font-mono text-xs bg-slate-900 dark:bg-slate-950 dark:border dark:border-slate-800 text-slate-100 p-2.5 rounded-lg overflow-x-auto leading-relaxed"># Main Folder
+## Subfolder
+### Deeper Folder</pre>
+            </div>
+
+            <!-- Copy Block Documentation -->
+            <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
+              <div class="font-semibold text-slate-800 dark:text-slate-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                Copy Blocks
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Start with <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-700 dark:text-slate-200">[Copy]</code>. <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-700 dark:text-slate-200">Description:</code> is optional. <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-700 dark:text-slate-200">Text:</code> supports single or multiple lines.</p>
+              <pre class="font-mono text-xs bg-slate-900 dark:bg-slate-950 dark:border dark:border-slate-800 text-slate-100 p-2.5 rounded-lg overflow-x-auto leading-relaxed">[Copy]
+Title: My Greeting
+Description: Optional note
+Text:
+Hello!
+Multiple lines work too.</pre>
+            </div>
+
+            <!-- Custom Buttons Documentation -->
+            <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
+              <div class="font-semibold text-slate-800 dark:text-slate-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                Custom Buttons
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Start with <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-700 dark:text-slate-200">[Button]</code>. Put before any folder for top quick-links, or inside any folder.</p>
+              <pre class="font-mono text-xs bg-slate-900 dark:bg-slate-950 dark:border dark:border-slate-800 text-slate-100 p-2.5 rounded-lg overflow-x-auto leading-relaxed">[Button]
+Title: Google Docs
+Link: https://docs.google.com
+Hover: Open my documents</pre>
+            </div>
+          </div>
+
+          <div class="text-xs text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 px-3.5 py-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800">
+            <strong class="text-slate-700 dark:text-slate-200">Tip:</strong> If your copied text needs to include lines starting with <code class="font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-1 rounded"># </code>, <code class="font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-1 rounded">[Copy]</code>, or <code class="font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-1 rounded">[Button]</code>, wrap the text block with <code class="font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-1 rounded">"""</code> on the line after <code class="font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-1 rounded">Text:</code> and <code class="font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-1 rounded">"""</code> at the end.
+          </div>
+        </div>
+      </div>
+
+      <!-- Editor Toolbar -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/90 flex flex-wrap items-center justify-between gap-2">
+          <!-- Quick Template Insert Buttons -->
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-xs font-medium text-slate-400 dark:text-slate-500 mr-1 hidden sm:inline">Insert:</span>
+            <button
+              id="insertFolderBtn"
+              type="button"
+              class="px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-[0.98] transition-all"
+            >
+              + Folder
+            </button>
+            <button
+              id="insertCopyBtn"
+              type="button"
+              class="px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-[0.98] transition-all"
+            >
+              + Copy Block
+            </button>
+            <button
+              id="insertButtonBtn"
+              type="button"
+              class="px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-[0.98] transition-all"
+            >
+              + Link Button
+            </button>
+          </div>
+
+          <!-- Utility Actions (Copy All Data / Reset) -->
+          <div class="flex items-center gap-2">
+            <button
+              id="copyAllDataBtn"
+              type="button"
+              class="px-3 py-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/15 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 rounded-lg transition-colors flex items-center gap-1.5"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span>Copy All Data</span>
+            </button>
+
+            <!-- Inline 2-step Reset Demo Button (avoids confirm()) -->
+            <div id="resetControls" class="flex items-center gap-1">
+              <button
+                id="resetDemoBtn"
+                type="button"
+                class="px-2.5 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                Load Example
+              </button>
+              <div id="resetConfirmGroup" class="hidden items-center gap-1 bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800/80 px-2 py-1 rounded-lg">
+                <span class="text-xs text-amber-800 dark:text-amber-200 font-medium">Replace?</span>
+                <button id="confirmResetBtn" type="button" class="text-xs font-semibold text-amber-900 dark:text-amber-100 underline hover:text-amber-700 dark:hover:text-amber-300 px-1">Yes</button>
+                <button id="cancelResetBtn" type="button" class="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-1">No</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Textarea Editor -->
+        <div class="relative">
+          <textarea
+            id="dataEditor"
+            spellcheck="false"
+            aria-label="Library Text Data"
+            placeholder="Type your folders, [Copy] blocks, and [Button] links here..."
+            class="w-full min-h-[55vh] sm:min-h-[60vh] p-4 font-mono text-xs sm:text-sm leading-relaxed text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 bg-white dark:bg-slate-950/60 focus:outline-none resize-y"
+          ></textarea>
+        </div>
+
+        <!-- Status Footer -->
+        <div class="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/90 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <div id="parseStats" class="flex items-center gap-2">
+            <span>0 folders · 0 copy blocks · 0 buttons</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span id="saveStatusDot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span id="saveStatusText" class="font-medium text-slate-600 dark:text-slate-300">Saved automatically</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Non-intrusive Toast Notification -->
+  <div
+    id="toast"
+    role="status"
+    aria-live="polite"
+    class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 translate-y-2 transition-all duration-200"
+  >
+    <div class="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2">
+      <svg class="w-4 h-4 text-emerald-400 dark:text-emerald-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+      <span id="toastMessage">Copied to clipboard</span>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // =========================================================================
+      // CONSTANTS & LOCAL STORAGE KEYS
+      // =========================================================================
+      const STORAGE_KEY_DATA = 'copyLibrary_textData_v1';
+      const STORAGE_KEY_TAB = 'copyLibrary_activeTab_v1';
+      const STORAGE_KEY_COLLAPSED = 'copyLibrary_collapsedFolders_v1';
+      const STORAGE_KEY_THEME = 'copyLibrary_theme_v1';
+
+      // Default human-readable starter data so the user immediately sees how everything works
+      const DEFAULT_SAMPLE_DATA = `[Button]
+Title: Google Docs
+Link: https://docs.google.com
+Hover: Open Google Docs in a new tab
+
+[Button]
+Title: Gmail
+Link: https://mail.google.com
+Hover: Check your email inbox
+
+# Work
+## Email Replies
+
+[Copy]
+Title: Friendly Follow-Up
+Description: Use when checking in after a few days
+Text:
+Hi there,
+
+Just checking in to see if you had any thoughts on my last message. Let me know if you need anything else from my side!
+
+Best,
+Alex
+
+[Copy]
+Title: Quick Thank You
+Text: Thanks so much for sending that over—I really appreciate it!
+
+## Meeting Info
+
+[Copy]
+Title: Personal Meeting Room
+Description: Reusable video call link
+Text: https://meet.example.com/alex-room
+
+[Button]
+Title: Team Calendar
+Link: https://calendar.google.com
+Hover: View upcoming meetings and deadlines
+
+# Personal
+## Everyday Info
+
+[Copy]
+Title: Home Wi-Fi Guest Password
+Description: Share with visitors
+Text: SunnyDay-4829
+
+[Copy]
+Title: Shipping Address
+Text:
+Alex Rivera
+742 Evergreen Terrace
+Springfield, IL 62704`;
+
+      // =========================================================================
+      // APPLICATION STATE
+      // =========================================================================
+      let rawTextData = '';
+      let activeTab = 'library'; // Default tab is always 'library' (Copy / Paste Library)
+      let collapsedFolders = new Set();
+      let searchQuery = '';
+      let lastParsedData = null;
+      let toastTimer = null;
+      let saveBadgeTimer = null;
+
+      // =========================================================================
+      // DOM ELEMENTS
+      // =========================================================================
+      const themeToggleBtn = document.getElementById('themeToggleBtn');
+      const tabBtnLibrary = document.getElementById('tabBtnLibrary');
+      const tabBtnData = document.getElementById('tabBtnData');
+      const panelLibrary = document.getElementById('panelLibrary');
+      const panelData = document.getElementById('panelData');
+
+      const searchInput = document.getElementById('searchInput');
+      const clearSearchBtn = document.getElementById('clearSearchBtn');
+      const toggleAllFoldersBtn = document.getElementById('toggleAllFoldersBtn');
+
+      const rootButtonsContainer = document.getElementById('rootButtonsContainer');
+      const rootButtonsList = document.getElementById('rootButtonsList');
+      const rootItemsContainer = document.getElementById('rootItemsContainer');
+      const foldersContainer = document.getElementById('foldersContainer');
+      const emptyLibraryState = document.getElementById('emptyLibraryState');
+      const emptyStateTitle = document.getElementById('emptyStateTitle');
+      const emptyStateDesc = document.getElementById('emptyStateDesc');
+      const goToDataTabBtn = document.getElementById('goToDataTabBtn');
+
+      const docsToggleBtn = document.getElementById('docsToggleBtn');
+      const docsChevron = document.getElementById('docsChevron');
+      const docsContent = document.getElementById('docsContent');
+
+      const dataEditor = document.getElementById('dataEditor');
+      const parseStats = document.getElementById('parseStats');
+      const saveStatusText = document.getElementById('saveStatusText');
+      const mobileSaveBadge = document.getElementById('mobileSaveBadge');
+
+      const insertFolderBtn = document.getElementById('insertFolderBtn');
+      const insertCopyBtn = document.getElementById('insertCopyBtn');
+      const insertButtonBtn = document.getElementById('insertButtonBtn');
+      const copyAllDataBtn = document.getElementById('copyAllDataBtn');
+
+      const resetDemoBtn = document.getElementById('resetDemoBtn');
+      const resetConfirmGroup = document.getElementById('resetConfirmGroup');
+      const confirmResetBtn = document.getElementById('confirmResetBtn');
+      const cancelResetBtn = document.getElementById('cancelResetBtn');
+
+      const toastEl = document.getElementById('toast');
+      const toastMessageEl = document.getElementById('toastMessage');
+
+      // =========================================================================
+      // SAFE STORAGE HELPERS
+      // =========================================================================
+      function storageGet(key) {
+        try {
+          return window.localStorage.getItem(key);
+        } catch (err) {
+          console.warn('localStorage read unavailable:', err);
+          return null;
+        }
+      }
+
+      function storageSet(key, value) {
+        try {
+          window.localStorage.setItem(key, value);
+          return true;
+        } catch (err) {
+          console.warn('localStorage write unavailable:', err);
+          return false;
+        }
+      }
+
+      // =========================================================================
+      // CLIPBOARD & TOAST HELPERS
+      // =========================================================================
+      /**
+       * Copies text to the clipboard using document.execCommand('copy')
+       * so it works reliably even in restricted iframe environments.
+       */
+      function copyTextToClipboard(text) {
+        try {
+          const tempTextarea = document.createElement('textarea');
+          tempTextarea.value = text;
+          tempTextarea.setAttribute('readonly', '');
+          tempTextarea.style.position = 'fixed';
+          tempTextarea.style.top = '-9999px';
+          tempTextarea.style.left = '-9999px';
+          document.body.appendChild(tempTextarea);
+
+          tempTextarea.focus();
+          tempTextarea.select();
+          tempTextarea.setSelectionRange(0, tempTextarea.value.length);
+
+          const success = document.execCommand('copy');
+          document.body.removeChild(tempTextarea);
+          return success;
+        } catch (err) {
+          console.error('Copy failed:', err);
+          return false;
+        }
+      }
+
+      /**
+       * Displays a brief bottom toast notification.
+       */
+      function showToast(message) {
+        toastMessageEl.textContent = message;
+        toastEl.classList.remove('opacity-0', 'translate-y-2');
+        toastEl.classList.add('opacity-100', 'translate-y-0');
+
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toastEl.classList.remove('opacity-100', 'translate-y-0');
+          toastEl.classList.add('opacity-0', 'translate-y-2');
+        }, 1800);
+      }
+
+      // =========================================================================
+      // URL SANITIZATION HELPER
+      // =========================================================================
+      function normalizeSafeUrl(rawUrl) {
+        const trimmed = (rawUrl || '').trim();
+        if (!trimmed) return '#';
+
+        // Prevent unsafe schemes like javascript: or data:
+        const lower = trimmed.toLowerCase();
+        if (lower.startsWith('javascript:') || lower.startsWith('data:') || lower.startsWith('vbscript:')) {
+          return '#';
+        }
+
+        // Automatically prepend https:// if the user typed e.g. "google.com"
+        if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+          return 'https://' + trimmed;
+        }
+        return trimmed;
+      }
+
+      // =========================================================================
+      // HUMAN-READABLE TEXT DATA PARSER
+      // =========================================================================
+      /**
+       * Parses plain human-readable text into:
+       * {
+       *   rootButtons: Array<{ title, link, hover }>,
+       *   rootItems: Array<{ title, description, text }>,
+       *   folders: Array<FolderNode>,
+       *   stats: { folders, items, buttons }
+       * }
+       *
+       * FolderNode: { id, name, level, buttons, items, subfolders }
+       */
+      function parseLibraryText(inputText) {
+        const result = {
+          rootButtons: [],
+          rootItems: [],
+          folders: [],
+          stats: { folders: 0, items: 0, buttons: 0 },
+        };
+
+        const lines = (inputText || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+        const folderStack = []; // [{ level, folder }]
+        const seenFolderIds = {};
+
+        let currentBlock = null;
+
+        function getCurrentTarget() {
+          if (folderStack.length > 0) {
+            return folderStack[folderStack.length - 1].folder;
+          }
+          return null;
+        }
+
+        function finalizeCurrentBlock() {
+          if (!currentBlock) return;
+
+          const target = getCurrentTarget();
+
+          if (currentBlock.type === 'copy') {
+            const textLines = currentBlock.textLines.slice();
+
+            // Trim leading/trailing blank lines unless explicitly triple-quoted
+            if (!currentBlock.usedTripleQuote) {
+              while (textLines.length > 0 && textLines[0].trim() === '') {
+                textLines.shift();
+              }
+              while (textLines.length > 0 && textLines[textLines.length - 1].trim() === '') {
+                textLines.pop();
+              }
+            }
+
+            const finalItem = {
+              title: (currentBlock.data.title || '').trim(),
+              description: (currentBlock.data.description || '').trim(),
+              text: textLines.join('\n'),
+            };
+
+            // Only store non-empty blocks
+            if (finalItem.title || finalItem.text || finalItem.description) {
+              if (!finalItem.title) finalItem.title = 'Untitled';
+              if (target) {
+                target.items.push(finalItem);
+              } else {
+                result.rootItems.push(finalItem);
+              }
+              result.stats.items += 1;
+            }
+          } else if (currentBlock.type === 'button') {
+            const finalButton = {
+              title: (currentBlock.data.title || '').trim(),
+              link: (currentBlock.data.link || '').trim(),
+              hover: (currentBlock.data.hover || '').trim(),
+            };
+
+            if (finalButton.title || finalButton.link) {
+              if (!finalButton.title) finalButton.title = finalButton.link;
+              if (target) {
+                target.buttons.push(finalButton);
+              } else {
+                result.rootButtons.push(finalButton);
+              }
+              result.stats.buttons += 1;
+            }
+          }
+
+          currentBlock = null;
+        }
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          const trimmed = line.trim();
+
+          // 1. Inside an explicit triple-quoted multiline text block
+          if (currentBlock && currentBlock.type === 'copy' && currentBlock.inTripleQuote) {
+            if (trimmed === '"""') {
+              currentBlock.inTripleQuote = false;
+              currentBlock.inText = false;
+            } else {
+              currentBlock.textLines.push(line);
+            }
+            continue;
+          }
+
+          // 2. Check for Folder Header: "# Folder", "## Subfolder", etc.
+          const folderMatch = line.match(/^(#{1,6})\s+(.+)$/);
+          if (folderMatch) {
+            finalizeCurrentBlock();
+
+            const level = folderMatch[1].length;
+            const name = folderMatch[2].trim();
+
+            // Pop folders of equal or deeper level so nesting matches # count
+            while (folderStack.length > 0 && folderStack[folderStack.length - 1].level >= level) {
+              folderStack.pop();
+            }
+
+            // Build a stable ID based on folder path so open/closed states persist across edits
+            const pathKey = folderStack.map((entry) => entry.folder.name).concat(name).join(' > ');
+            seenFolderIds[pathKey] = (seenFolderIds[pathKey] || 0) + 1;
+            const folderId = pathKey + (seenFolderIds[pathKey] > 1 ? ` #${seenFolderIds[pathKey]}` : '');
+
+            const newFolder = {
+              id: folderId,
+              name: name,
+              level: level,
+              buttons: [],
+              items: [],
+              subfolders: [],
+            };
+
+            if (folderStack.length === 0) {
+              result.folders.push(newFolder);
+            } else {
+              folderStack[folderStack.length - 1].folder.subfolders.push(newFolder);
+            }
+
+            folderStack.push({ level: level, folder: newFolder });
+            result.stats.folders += 1;
+            continue;
+          }
+
+          // 3. Check for Block Markers: [Copy] (or [Item]/[Text]) and [Button] (or [Link])
+          if (/^\[(copy|item|snippet|text)\]$/i.test(trimmed)) {
+            finalizeCurrentBlock();
+            currentBlock = {
+              type: 'copy',
+              data: { title: '', description: '' },
+              inText: false,
+              inTripleQuote: false,
+              usedTripleQuote: false,
+              textLines: [],
+            };
+            continue;
+          }
+
+          if (/^\[(button|link)\]$/i.test(trimmed)) {
+            finalizeCurrentBlock();
+            currentBlock = {
+              type: 'button',
+              data: { title: '', link: '', hover: '' },
+            };
+            continue;
+          }
+
+          // 4. Optional horizontal separator line "---" ends current block cleanly
+          if (trimmed === '---' && currentBlock) {
+            finalizeCurrentBlock();
+            continue;
+          }
+
+          // 5. Parse fields inside active [Copy] block
+          if (currentBlock && currentBlock.type === 'copy') {
+            if (currentBlock.inText) {
+              currentBlock.textLines.push(line);
+              continue;
+            }
+
+            if (trimmed === '') continue;
+
+            const titleMatch = line.match(/^title\s*:\s*(.*)$/i);
+            if (titleMatch) {
+              currentBlock.data.title = titleMatch[1].trim();
+              continue;
+            }
+
+            const descMatch = line.match(/^(?:description|desc)\s*:\s*(.*)$/i);
+            if (descMatch) {
+              currentBlock.data.description = descMatch[1].trim();
+              continue;
+            }
+
+            const textMatch = line.match(/^text\s*:\s*(.*)$/i);
+            if (textMatch) {
+              const remainder = textMatch[1];
+              const remainderTrimmed = remainder.trim();
+
+              if (remainderTrimmed === '"""') {
+                currentBlock.inTripleQuote = true;
+                currentBlock.usedTripleQuote = true;
+                currentBlock.inText = true;
+              } else if (remainderTrimmed.startsWith('"""') && remainderTrimmed.endsWith('"""') && remainderTrimmed.length >= 6) {
+                currentBlock.usedTripleQuote = true;
+                currentBlock.textLines.push(remainderTrimmed.slice(3, -3));
+              } else {
+                currentBlock.inText = true;
+                if (remainder.length > 0) {
+                  currentBlock.textLines.push(remainder);
+                }
+              }
+              continue;
+            }
+
+            // If a line appears before Text: without a label, treat it gracefully as starting text if Title exists
+            if (currentBlock.data.title) {
+              currentBlock.inText = true;
+              currentBlock.textLines.push(line);
+            }
+            continue;
+          }
+
+          // 6. Parse fields inside active [Button] block
+          if (currentBlock && currentBlock.type === 'button') {
+            if (trimmed === '') continue;
+
+            const titleMatch = line.match(/^(?:title|name|label)\s*:\s*(.*)$/i);
+            if (titleMatch) {
+              currentBlock.data.title = titleMatch[1].trim();
+              continue;
+            }
+
+            const linkMatch = line.match(/^(?:link|url|href)\s*:\s*(.*)$/i);
+            if (linkMatch) {
+              currentBlock.data.link = linkMatch[1].trim();
+              continue;
+            }
+
+            const hoverMatch = line.match(/^(?:hover|tooltip|description|desc)\s*:\s*(.*)$/i);
+            if (hoverMatch) {
+              currentBlock.data.hover = hoverMatch[1].trim();
+              continue;
+            }
+          }
+        }
+
+        // Finalize any trailing block at end of file
+        finalizeCurrentBlock();
+
+        return result;
+      }
+
+      // =========================================================================
+      // SEARCH FILTERING HELPER
+      // =========================================================================
+      function matchesSearch(str, query) {
+        if (!query) return true;
+        return (str || '').toLowerCase().includes(query);
+      }
+
+      function filterFolderTree(folder, query) {
+        if (!query) {
+          return {
+            ...folder,
+            forceOpen: false,
+            subfolders: folder.subfolders.map((sub) => filterFolderTree(sub, query)),
+          };
+        }
+
+        const folderNameMatches = matchesSearch(folder.name, query);
+
+        const matchedButtons = folderNameMatches
+          ? folder.buttons
+          : folder.buttons.filter(
+              (b) => matchesSearch(b.title, query) || matchesSearch(b.link, query) || matchesSearch(b.hover, query)
+            );
+
+        const matchedItems = folderNameMatches
+          ? folder.items
+          : folder.items.filter(
+              (item) =>
+                matchesSearch(item.title, query) ||
+                matchesSearch(item.description, query) ||
+                matchesSearch(item.text, query)
+            );
+
+        const matchedSubfolders = folder.subfolders
+          .map((sub) => filterFolderTree(sub, query))
+          .filter(Boolean);
+
+        if (folderNameMatches || matchedButtons.length > 0 || matchedItems.length > 0 || matchedSubfolders.length > 0) {
+          return {
+            ...folder,
+            buttons: matchedButtons,
+            items: matchedItems,
+            subfolders: matchedSubfolders,
+            forceOpen: true,
+          };
+        }
+
+        return null;
+      }
+
+      // =========================================================================
+      // UI COMPONENT BUILDERS
+      // =========================================================================
+
+      /**
+       * Creates a Custom Link Button with sleek hover tooltip support.
+       */
+      function createLinkButtonElement(btnData) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'relative group inline-flex max-w-full';
+
+        const safeHref = normalizeSafeUrl(btnData.link);
+        const anchor = document.createElement('a');
+        anchor.href = safeHref;
+        if (safeHref !== '#') {
+          anchor.target = '_blank';
+          anchor.rel = 'noopener noreferrer';
+        }
+        anchor.setAttribute('aria-label', btnData.hover ? `${btnData.title} — ${btnData.hover}` : btnData.title);
+        anchor.className =
+          'inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-700/90 rounded-xl shadow-sm hover:border-indigo-300 dark:hover:border-indigo-500/70 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50/40 dark:hover:bg-indigo-500/10 active:scale-[0.98] transition-all min-h-[40px] max-w-full';
+
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'truncate';
+        labelSpan.textContent = btnData.title;
+
+        const extIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        extIcon.setAttribute('class', 'w-3.5 h-3.5 text-slate-400 dark:text-slate-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 shrink-0 transition-colors');
+        extIcon.setAttribute('fill', 'none');
+        extIcon.setAttribute('stroke', 'currentColor');
+        extIcon.setAttribute('stroke-width', '2');
+        extIcon.setAttribute('viewBox', '0 0 24 24');
+        extIcon.innerHTML =
+          '<path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />';
+
+        anchor.appendChild(labelSpan);
+        anchor.appendChild(extIcon);
+        wrapper.appendChild(anchor);
+
+        // Styled hover tooltip if Hover text is provided
+        if (btnData.hover) {
+          const tooltip = document.createElement('div');
+          tooltip.setAttribute('role', 'tooltip');
+          tooltip.className =
+            'pointer-events-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 w-max max-w-[240px] px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-normal shadow-lg text-center break-words';
+          tooltip.textContent = btnData.hover;
+
+          // Little tooltip pointer triangle
+          const arrow = document.createElement('div');
+          arrow.className =
+            'w-2 h-2 bg-slate-900 dark:bg-slate-100 rotate-45 absolute top-full left-1/2 -translate-x-1/2 -mt-1';
+          tooltip.appendChild(arrow);
+
+          wrapper.appendChild(tooltip);
+        }
+
+        return wrapper;
+      }
+
+      /**
+       * Creates a Copyable Block Card (Title, optional Description, Text preview, Copy button).
+       */
+      function createCopyCardElement(item) {
+        const card = document.createElement('div');
+        card.className =
+          'bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl p-3.5 sm:p-4 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-all';
+
+        // Top row: Title + Description + Copy Button
+        const topRow = document.createElement('div');
+        topRow.className = 'flex items-start justify-between gap-3';
+
+        const headerInfo = document.createElement('div');
+        headerInfo.className = 'min-w-0 flex-1';
+
+        const titleEl = document.createElement('h3');
+        titleEl.className = 'text-sm sm:text-[15px] font-semibold text-slate-900 dark:text-slate-100 break-words leading-snug';
+        titleEl.textContent = item.title;
+        headerInfo.appendChild(titleEl);
+
+        if (item.description) {
+          const descEl = document.createElement('p');
+          descEl.className = 'text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 break-words';
+          descEl.textContent = item.description;
+          headerInfo.appendChild(descEl);
+        }
+
+        // Copy Button
+        const defaultBtnClasses = ['bg-slate-900', 'dark:bg-indigo-600', 'hover:bg-slate-800', 'dark:hover:bg-indigo-500'];
+        const copiedBtnClasses = ['bg-emerald-600', 'dark:bg-emerald-600', 'hover:bg-emerald-700', 'dark:hover:bg-emerald-500'];
+
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className =
+          'shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-medium rounded-xl bg-slate-900 dark:bg-indigo-600 text-white hover:bg-slate-800 dark:hover:bg-indigo-500 active:scale-[0.97] transition-all min-h-[38px] shadow-sm';
+        copyBtn.innerHTML = `
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          <span>Copy</span>
+        `;
+
+        let resetBtnTimer = null;
+        function handleCopy() {
+          const ok = copyTextToClipboard(item.text);
+          if (ok) {
+            copyBtn.classList.remove(...defaultBtnClasses);
+            copyBtn.classList.add(...copiedBtnClasses);
+            copyBtn.innerHTML = `
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>Copied</span>
+            `;
+            showToast(`Copied "${item.title}"`);
+
+            if (resetBtnTimer) clearTimeout(resetBtnTimer);
+            resetBtnTimer = setTimeout(() => {
+              copyBtn.classList.remove(...copiedBtnClasses);
+              copyBtn.classList.add(...defaultBtnClasses);
+              copyBtn.innerHTML = `
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <span>Copy</span>
+              `;
+            }, 1500);
+          } else {
+            showToast('Could not copy text');
+          }
+        }
+
+        copyBtn.addEventListener('click', handleCopy);
+
+        topRow.appendChild(headerInfo);
+        topRow.appendChild(copyBtn);
+        card.appendChild(topRow);
+
+        // Text Content Preview (clicking the preview also copies for extra speed!)
+        if (item.text) {
+          const textBox = document.createElement('div');
+          textBox.title = 'Click to copy';
+          textBox.className =
+            'mt-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-950/70 border border-slate-200/70 dark:border-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-200 font-mono whitespace-pre-wrap break-words max-h-48 overflow-y-auto cursor-pointer hover:bg-indigo-50/40 dark:hover:bg-indigo-500/10 hover:border-indigo-200/80 dark:hover:border-indigo-500/40 transition-colors';
+          textBox.textContent = item.text;
+          textBox.addEventListener('click', handleCopy);
+          card.appendChild(textBox);
+        }
+
+        return card;
+      }
+
+      /**
+       * Recursively counts total items and buttons inside a folder subtree for the badge.
+       */
+      function countFolderContents(folder) {
+        let count = folder.items.length + folder.buttons.length;
+        for (const sub of folder.subfolders) {
+          count += countFolderContents(sub);
+        }
+        return count;
+      }
+
+      /**
+       * Recursively collects every folder ID in a folder tree.
+       */
+      function collectAllFolderIds(folders, acc = []) {
+        for (const folder of folders) {
+          acc.push(folder.id);
+          if (folder.subfolders && folder.subfolders.length > 0) {
+            collectAllFolderIds(folder.subfolders, acc);
+          }
+        }
+        return acc;
+      }
+
+      /**
+       * Updates the Expand All / Collapse All toggle button label and visibility.
+       */
+      function updateToggleAllButtonLabel() {
+        if (!lastParsedData) return;
+        const allIds = collectAllFolderIds(lastParsedData.folders);
+        if (allIds.length === 0) {
+          toggleAllFoldersBtn.classList.add('hidden');
+          return;
+        }
+        toggleAllFoldersBtn.classList.remove('hidden');
+        const allCollapsed = allIds.every((id) => collapsedFolders.has(id));
+        toggleAllFoldersBtn.textContent = allCollapsed ? 'Expand All' : 'Collapse All';
+      }
+
+      /**
+       * Recursively creates a collapsible Folder element (supports arbitrary folder nesting).
+       */
+      function createFolderElement(folder, depth) {
+        const isCollapsed = !folder.forceOpen && collapsedFolders.has(folder.id);
+        const totalCount = countFolderContents(folder);
+
+        const wrapper = document.createElement('div');
+        wrapper.className =
+          depth === 0
+            ? 'bg-white/70 dark:bg-slate-900/60 border border-slate-200/90 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm'
+            : 'border-l-2 border-slate-200 dark:border-slate-800 pl-3 sm:pl-4 pt-1';
+
+        // Folder Header Toggle Button
+        const headerBtn = document.createElement('button');
+        headerBtn.type = 'button';
+        headerBtn.setAttribute('aria-expanded', String(!isCollapsed));
+        headerBtn.className =
+          depth === 0
+            ? 'w-full px-4 py-3.5 flex items-center justify-between gap-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors min-h-[50px]'
+            : 'w-full px-2.5 py-2 flex items-center justify-between gap-2 text-left rounded-xl hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors min-h-[44px]';
+
+        const leftGroup = document.createElement('div');
+        leftGroup.className = 'flex items-center gap-2.5 min-w-0';
+
+        // Chevron Arrow
+        const chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        chevron.setAttribute(
+          'class',
+          `w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0 transition-transform duration-150 ${isCollapsed ? '-rotate-90' : 'rotate-0'}`
+        );
+        chevron.setAttribute('fill', 'none');
+        chevron.setAttribute('stroke', 'currentColor');
+        chevron.setAttribute('stroke-width', '2.2');
+        chevron.setAttribute('viewBox', '0 0 24 24');
+        chevron.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />';
+
+        // Folder Icon
+        const folderIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        folderIcon.setAttribute(
+          'class',
+          `w-4 h-4 shrink-0 ${depth === 0 ? 'text-amber-500' : 'text-amber-400'}`
+        );
+        folderIcon.setAttribute('fill', 'currentColor');
+        folderIcon.setAttribute('viewBox', '0 0 20 20');
+        folderIcon.innerHTML =
+          '<path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />';
+
+        // Folder Name
+        const nameEl = document.createElement('span');
+        nameEl.className =
+          depth === 0
+            ? 'text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 truncate'
+            : 'text-sm font-semibold text-slate-700 dark:text-slate-200 truncate';
+        nameEl.textContent = folder.name;
+
+        leftGroup.appendChild(chevron);
+        leftGroup.appendChild(folderIcon);
+        leftGroup.appendChild(nameEl);
+
+        // Count Badge
+        const countBadge = document.createElement('span');
+        countBadge.className =
+          'text-xs font-medium text-slate-400 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full shrink-0';
+        countBadge.textContent = String(totalCount);
+
+        headerBtn.appendChild(leftGroup);
+        headerBtn.appendChild(countBadge);
+        wrapper.appendChild(headerBtn);
+
+        // Folder Body (Buttons, Items, and Nested Subfolders)
+        const body = document.createElement('div');
+        body.className =
+          depth === 0
+            ? `${isCollapsed ? 'hidden' : 'block'} px-3 sm:px-4 pb-4 pt-1 space-y-3 border-t border-slate-100 dark:border-slate-800`
+            : `${isCollapsed ? 'hidden' : 'block'} pt-2 pb-1 space-y-2.5`;
+
+        // Buttons inside this folder
+        if (folder.buttons.length > 0) {
+          const btnRow = document.createElement('div');
+          btnRow.className = 'flex flex-wrap gap-2';
+          folder.buttons.forEach((btn) => btnRow.appendChild(createLinkButtonElement(btn)));
+          body.appendChild(btnRow);
+        }
+
+        // Copy Items inside this folder
+        if (folder.items.length > 0) {
+          const itemsList = document.createElement('div');
+          itemsList.className = 'space-y-2.5';
+          folder.items.forEach((item) => itemsList.appendChild(createCopyCardElement(item)));
+          body.appendChild(itemsList);
+        }
+
+        // Nested Subfolders
+        if (folder.subfolders.length > 0) {
+          const subContainer = document.createElement('div');
+          subContainer.className = 'space-y-2.5 pt-1';
+          folder.subfolders.forEach((sub) => {
+            subContainer.appendChild(createFolderElement(sub, depth + 1));
+          });
+          body.appendChild(subContainer);
+        }
+
+        // Empty folder hint
+        if (folder.buttons.length === 0 && folder.items.length === 0 && folder.subfolders.length === 0) {
+          const emptyNote = document.createElement('p');
+          emptyNote.className = 'text-xs text-slate-400 dark:text-slate-500 italic py-1';
+          emptyNote.textContent = 'Empty folder';
+          body.appendChild(emptyNote);
+        }
+
+        wrapper.appendChild(body);
+
+        // Toggle open/closed state
+        headerBtn.addEventListener('click', () => {
+          const nowHidden = body.classList.toggle('hidden');
+          headerBtn.setAttribute('aria-expanded', String(!nowHidden));
+          chevron.classList.toggle('-rotate-90', nowHidden);
+          chevron.classList.toggle('rotate-0', !nowHidden);
+
+          if (nowHidden) {
+            collapsedFolders.add(folder.id);
+          } else {
+            collapsedFolders.delete(folder.id);
+          }
+          persistCollapsedState();
+          updateToggleAllButtonLabel();
+        });
+
+        return wrapper;
+      }
+
+      // =========================================================================
+      // MAIN LIBRARY RENDERER
+      // =========================================================================
+      function renderLibrary() {
+        const parsed = parseLibraryText(rawTextData);
+        lastParsedData = parsed;
+
+        // Update footer stats in the Text Data tab
+        const { folders: fCount, items: iCount, buttons: bCount } = parsed.stats;
+        parseStats.textContent = `${fCount} ${fCount === 1 ? 'folder' : 'folders'} · ${iCount} ${iCount === 1 ? 'copy block' : 'copy blocks'} · ${bCount} ${bCount === 1 ? 'button' : 'buttons'}`;
+
+        const query = searchQuery.trim().toLowerCase();
+
+        // Filter root buttons, root items, and folder trees based on search query
+        const filteredRootButtons = query
+          ? parsed.rootButtons.filter(
+              (b) => matchesSearch(b.title, query) || matchesSearch(b.link, query) || matchesSearch(b.hover, query)
+            )
+          : parsed.rootButtons;
+
+        const filteredRootItems = query
+          ? parsed.rootItems.filter(
+              (item) =>
+                matchesSearch(item.title, query) ||
+                matchesSearch(item.description, query) ||
+                matchesSearch(item.text, query)
+            )
+          : parsed.rootItems;
+
+        const filteredFolders = parsed.folders
+          .map((folder) => filterFolderTree(folder, query))
+          .filter(Boolean);
+
+        // Render top-level custom link buttons
+        rootButtonsList.innerHTML = '';
+        if (filteredRootButtons.length > 0) {
+          filteredRootButtons.forEach((btn) => rootButtonsList.appendChild(createLinkButtonElement(btn)));
+          rootButtonsContainer.classList.remove('hidden');
+        } else {
+          rootButtonsContainer.classList.add('hidden');
+        }
+
+        // Render top-level copy items (if any exist outside folders)
+        rootItemsContainer.innerHTML = '';
+        if (filteredRootItems.length > 0) {
+          filteredRootItems.forEach((item) => rootItemsContainer.appendChild(createCopyCardElement(item)));
+          rootItemsContainer.classList.remove('hidden');
+        } else {
+          rootItemsContainer.classList.add('hidden');
+        }
+
+        // Render nested folder tree
+        foldersContainer.innerHTML = '';
+        filteredFolders.forEach((folder) => {
+          foldersContainer.appendChild(createFolderElement(folder, 0));
+        });
+
+        // Show empty state if nothing matches or library has no entries
+        const hasVisibleContent =
+          filteredRootButtons.length > 0 || filteredRootItems.length > 0 || filteredFolders.length > 0;
+
+        if (!hasVisibleContent) {
+          emptyLibraryState.classList.remove('hidden');
+          if (query) {
+            emptyStateTitle.textContent = 'No matches found';
+            emptyStateDesc.textContent = `Nothing in your library matched "${searchQuery.trim()}".`;
+            goToDataTabBtn.classList.add('hidden');
+          } else {
+            emptyStateTitle.textContent = 'Your library is empty';
+            emptyStateDesc.textContent = 'Open the Text Data tab to add folders, copy blocks, and custom buttons.';
+            goToDataTabBtn.classList.remove('hidden');
+          }
+        } else {
+          emptyLibraryState.classList.add('hidden');
+        }
+
+        updateToggleAllButtonLabel();
+      }
+
+      // =========================================================================
+      // THEME MANAGEMENT (LIGHT / DARK MODE)
+      // =========================================================================
+      function updateThemeButtonAccessibility() {
+        const isDark = document.documentElement.classList.contains('dark');
+        themeToggleBtn.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+        themeToggleBtn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+      }
+
+      function applyTheme(theme, save = true) {
+        const isDark = theme === 'dark';
+        document.documentElement.classList.toggle('dark', isDark);
+        updateThemeButtonAccessibility();
+        if (save) {
+          storageSet(STORAGE_KEY_THEME, isDark ? 'dark' : 'light');
+        }
+      }
+
+      function toggleTheme() {
+        const isCurrentlyDark = document.documentElement.classList.contains('dark');
+        applyTheme(isCurrentlyDark ? 'light' : 'dark', true);
+      }
+
+      // =========================================================================
+      // TAB SWITCHING & PERSISTENCE
+      // =========================================================================
+      function setActiveTab(tabName, save = true) {
+        const normalized = tabName === 'data' ? 'data' : 'library';
+        activeTab = normalized;
+
+        const isLibrary = normalized === 'library';
+
+        // Update panels visibility
+        panelLibrary.classList.toggle('hidden', !isLibrary);
+        panelData.classList.toggle('hidden', isLibrary);
+
+        // Update tab button styles
+        const activeClasses = ['bg-white', 'dark:bg-slate-700', 'text-slate-900', 'dark:text-white', 'shadow-sm'];
+        const inactiveClasses = ['text-slate-500', 'dark:text-slate-400', 'hover:text-slate-800', 'dark:hover:text-slate-200'];
+
+        if (isLibrary) {
+          tabBtnLibrary.classList.add(...activeClasses);
+          tabBtnLibrary.classList.remove(...inactiveClasses);
+          tabBtnData.classList.remove(...activeClasses);
+          tabBtnData.classList.add(...inactiveClasses);
+          // Re-render library in case text data was just edited
+          renderLibrary();
+        } else {
+          tabBtnData.classList.add(...activeClasses);
+          tabBtnData.classList.remove(...inactiveClasses);
+          tabBtnLibrary.classList.remove(...activeClasses);
+          tabBtnLibrary.classList.add(...inactiveClasses);
+        }
+
+        tabBtnLibrary.setAttribute('aria-selected', String(isLibrary));
+        tabBtnData.setAttribute('aria-selected', String(!isLibrary));
+
+        if (save) {
+          storageSet(STORAGE_KEY_TAB, normalized);
+        }
+      }
+
+      function persistCollapsedState() {
+        try {
+          storageSet(STORAGE_KEY_COLLAPSED, JSON.stringify(Array.from(collapsedFolders)));
+        } catch (err) {
+          console.warn('Could not save collapsed folders:', err);
+        }
+      }
+
+      function saveTextData(newText) {
+        rawTextData = newText;
+        storageSet(STORAGE_KEY_DATA, rawTextData);
+
+        // Subtle live saved indicator
+        saveStatusText.textContent = 'Saved';
+        mobileSaveBadge.classList.remove('opacity-0');
+        mobileSaveBadge.classList.add('opacity-100');
+
+        if (saveBadgeTimer) clearTimeout(saveBadgeTimer);
+        saveBadgeTimer = setTimeout(() => {
+          saveStatusText.textContent = 'Saved automatically';
+          mobileSaveBadge.classList.remove('opacity-100');
+          mobileSaveBadge.classList.add('opacity-0');
+        }, 1200);
+
+        renderLibrary();
+      }
+
+      // =========================================================================
+      // EDITOR QUICK-INSERT HELPERS
+      // =========================================================================
+      function appendTemplateToEditor(templateText) {
+        const current = dataEditor.value;
+        const prefix = current.trim().length === 0 ? '' : current.endsWith('\n\n') ? '' : current.endsWith('\n') ? '\n' : '\n\n';
+        const updated = current + prefix + templateText;
+        dataEditor.value = updated;
+        saveTextData(updated);
+
+        // Focus editor and scroll smoothly to bottom
+        dataEditor.focus();
+        dataEditor.selectionStart = updated.length;
+        dataEditor.selectionEnd = updated.length;
+        dataEditor.scrollTop = dataEditor.scrollHeight;
+      }
+
+      // =========================================================================
+      // EVENT LISTENERS
+      // =========================================================================
+      themeToggleBtn.addEventListener('click', toggleTheme);
+      tabBtnLibrary.addEventListener('click', () => setActiveTab('library'));
+      tabBtnData.addEventListener('click', () => setActiveTab('data'));
+      goToDataTabBtn.addEventListener('click', () => setActiveTab('data'));
+
+      // Live search
+      searchInput.addEventListener('input', (e) => {
+        searchQuery = e.target.value;
+        clearSearchBtn.classList.toggle('hidden', searchQuery.length === 0);
+        renderLibrary();
+      });
+
+      clearSearchBtn.addEventListener('click', () => {
+        searchQuery = '';
+        searchInput.value = '';
+        clearSearchBtn.classList.add('hidden');
+        renderLibrary();
+        searchInput.focus();
+      });
+
+      // Expand / Collapse all folders
+      toggleAllFoldersBtn.addEventListener('click', () => {
+        if (!lastParsedData) return;
+        const allIds = collectAllFolderIds(lastParsedData.folders);
+        const allCollapsed = allIds.length > 0 && allIds.every((id) => collapsedFolders.has(id));
+
+        if (allCollapsed) {
+          collapsedFolders.clear();
+        } else {
+          allIds.forEach((id) => collapsedFolders.add(id));
+        }
+
+        persistCollapsedState();
+        renderLibrary();
+      });
+
+      // Formatting guide toggle (little down arrow)
+      docsToggleBtn.addEventListener('click', () => {
+        const isNowHidden = docsContent.classList.toggle('hidden');
+        docsToggleBtn.setAttribute('aria-expanded', String(!isNowHidden));
+        docsChevron.classList.toggle('rotate-180', !isNowHidden);
+      });
+
+      // Live auto-save as the user types in the Text Data editor
+      dataEditor.addEventListener('input', (e) => {
+        saveTextData(e.target.value);
+      });
+
+      // Quick insert templates
+      insertFolderBtn.addEventListener('click', () => {
+        appendTemplateToEditor('# New Folder\n');
+      });
+
+      insertCopyBtn.addEventListener('click', () => {
+        appendTemplateToEditor('[Copy]\nTitle: New Title\nDescription: Optional description\nText:\nText to copy goes here\n');
+      });
+
+      insertButtonBtn.addEventListener('click', () => {
+        appendTemplateToEditor('[Button]\nTitle: Website Name\nLink: https://example.com\nHover: Short description shown on hover\n');
+      });
+
+      // Copy entire Text Data externally for backup
+      copyAllDataBtn.addEventListener('click', () => {
+        const ok = copyTextToClipboard(dataEditor.value);
+        if (ok) {
+          showToast('All text data copied');
+        } else {
+          showToast('Could not copy text data');
+        }
+      });
+
+      // Two-step inline example reset (no confirm() popups)
+      resetDemoBtn.addEventListener('click', () => {
+        resetDemoBtn.classList.add('hidden');
+        resetConfirmGroup.classList.remove('hidden');
+        resetConfirmGroup.classList.add('flex');
+      });
+
+      cancelResetBtn.addEventListener('click', () => {
+        resetConfirmGroup.classList.add('hidden');
+        resetConfirmGroup.classList.remove('flex');
+        resetDemoBtn.classList.remove('hidden');
+      });
+
+      confirmResetBtn.addEventListener('click', () => {
+        dataEditor.value = DEFAULT_SAMPLE_DATA;
+        saveTextData(DEFAULT_SAMPLE_DATA);
+        resetConfirmGroup.classList.add('hidden');
+        resetConfirmGroup.classList.remove('flex');
+        resetDemoBtn.classList.remove('hidden');
+        showToast('Example data loaded');
+      });
+
+      // =========================================================================
+      // INITIALIZATION ON PAGE LOAD
+      // =========================================================================
+      function init() {
+        // 0. Sync dark mode toggle label and listen for OS theme changes if user hasn't picked manually
+        updateThemeButtonAccessibility();
+        if (window.matchMedia) {
+          const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+          const handleSystemThemeChange = (e) => {
+            if (!storageGet(STORAGE_KEY_THEME)) {
+              applyTheme(e.matches ? 'dark' : 'light', false);
+            }
+          };
+          if (mediaQuery.addEventListener) {
+            mediaQuery.addEventListener('change', handleSystemThemeChange);
+          }
+        }
+
+        // 1. Restore saved text data (or load friendly starter example on first visit)
+        const savedData = storageGet(STORAGE_KEY_DATA);
+        rawTextData = savedData !== null ? savedData : DEFAULT_SAMPLE_DATA;
+        dataEditor.value = rawTextData;
+
+        // 2. Restore collapsed folder states
+        const savedCollapsed = storageGet(STORAGE_KEY_COLLAPSED);
+        if (savedCollapsed) {
+          try {
+            const parsedIds = JSON.parse(savedCollapsed);
+            if (Array.isArray(parsedIds)) {
+              collapsedFolders = new Set(parsedIds);
+            }
+          } catch (err) {
+            collapsedFolders = new Set();
+          }
+        }
+
+        // 3. Restore last active tab; default to 'library' (Copy / Paste Library) if none saved
+        const savedTab = storageGet(STORAGE_KEY_TAB);
+        const initialTab = savedTab === 'data' ? 'data' : 'library';
+
+        renderLibrary();
+        setActiveTab(initialTab, false);
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
