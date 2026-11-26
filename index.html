@@ -36,6 +36,29 @@
       }
     })();
   </script>
+  <style>
+    /* Rich contenteditable editor placeholder & formatting preservation */
+    #dataEditor:empty::before {
+      content: attr(data-placeholder);
+      color: #94a3b8;
+      pointer-events: none;
+    }
+    .dark #dataEditor:empty::before {
+      color: #64748b;
+    }
+    #dataEditor b, #dataEditor strong, .rich-preview b, .rich-preview strong {
+      font-weight: 700;
+    }
+    #dataEditor u, .rich-preview u {
+      text-decoration: underline;
+    }
+    #dataEditor i, #dataEditor em, .rich-preview i, .rich-preview em {
+      font-style: italic;
+    }
+    #dataEditor s, #dataEditor strike, .rich-preview s, .rich-preview strike {
+      text-decoration: line-through;
+    }
+  </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans antialiased min-h-screen overflow-x-hidden selection:bg-indigo-100 dark:selection:bg-indigo-500/30 selection:text-indigo-900 dark:selection:text-indigo-200 transition-colors duration-200">
 
@@ -181,7 +204,149 @@
     <!-- ========================================================= -->
     <section id="panelData" role="tabpanel" aria-labelledby="tabBtnData" class="hidden space-y-4">
 
-      <!-- Collapsible Formatting Guide (Title next to a little down arrow) -->
+      <!-- Editor Card (Toolbar + Rich Text Editor + Status Footer) -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-sm overflow-visible">
+        <div class="px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/90 rounded-t-2xl flex flex-wrap items-center justify-between gap-2">
+          <!-- Left: Icon-Only Quick Template Insert Buttons (Tooltip shown on hover) -->
+          <div class="flex items-center gap-1.5">
+            <!-- + Folder (Icon only, text on hover) -->
+            <div class="relative group inline-flex">
+              <button
+                id="insertFolderBtn"
+                type="button"
+                aria-label="+ Folder"
+                class="w-9 h-9 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500/60 active:scale-[0.97] transition-all flex items-center justify-center"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                </svg>
+              </button>
+              <div role="tooltip" class="pointer-events-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-30 w-max px-2.5 py-1 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-medium shadow-lg">
+                + Folder
+                <div class="w-2 h-2 bg-slate-900 dark:bg-slate-100 rotate-45 absolute top-full left-1/2 -translate-x-1/2 -mt-1"></div>
+              </div>
+            </div>
+
+            <!-- + Copy Block (Icon only, text on hover) -->
+            <div class="relative group inline-flex">
+              <button
+                id="insertCopyBtn"
+                type="button"
+                aria-label="+ Copy Block"
+                class="w-9 h-9 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500/60 active:scale-[0.97] transition-all flex items-center justify-center"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </button>
+              <div role="tooltip" class="pointer-events-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-30 w-max px-2.5 py-1 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-medium shadow-lg">
+                + Copy Block
+                <div class="w-2 h-2 bg-slate-900 dark:bg-slate-100 rotate-45 absolute top-full left-1/2 -translate-x-1/2 -mt-1"></div>
+              </div>
+            </div>
+
+            <!-- + Link Button (Icon only, text on hover) -->
+            <div class="relative group inline-flex">
+              <button
+                id="insertButtonBtn"
+                type="button"
+                aria-label="+ Link Button"
+                class="w-9 h-9 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500/60 active:scale-[0.97] transition-all flex items-center justify-center"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+              </button>
+              <div role="tooltip" class="pointer-events-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-30 w-max px-2.5 py-1 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-medium shadow-lg">
+                + Link Button
+                <div class="w-2 h-2 bg-slate-900 dark:bg-slate-100 rotate-45 absolute top-full left-1/2 -translate-x-1/2 -mt-1"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Undo / Redo / Paste / Copy -->
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button
+              id="undoBtn"
+              type="button"
+              disabled
+              title="Undo (Ctrl+Z)"
+              aria-label="Undo"
+              class="px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none active:scale-[0.98] transition-all flex items-center gap-1"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+              </svg>
+              <span>Undo</span>
+            </button>
+
+            <button
+              id="redoBtn"
+              type="button"
+              disabled
+              title="Redo (Ctrl+Y)"
+              aria-label="Redo"
+              class="px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none active:scale-[0.98] transition-all flex items-center gap-1"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
+              </svg>
+              <span>Redo</span>
+            </button>
+
+            <button
+              id="pasteDataBtn"
+              type="button"
+              title="Paste from clipboard (preserves Google Drive formatting)"
+              class="px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg active:scale-[0.98] transition-all flex items-center gap-1.5"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              <span>Paste</span>
+            </button>
+
+            <button
+              id="copyAllDataBtn"
+              type="button"
+              title="Copy all formatted text data"
+              class="px-3 py-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/15 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 rounded-lg active:scale-[0.98] transition-colors flex items-center gap-1.5"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span>Copy</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Rich Text ContentEditable Editor (Preserves Google Drive bold, underline, colors & highlights) -->
+        <div class="relative">
+          <div
+            id="dataEditor"
+            contenteditable="true"
+            role="textbox"
+            aria-multiline="true"
+            spellcheck="false"
+            aria-label="Library Text Data"
+            data-placeholder="Type or paste your folders, [Copy] blocks, and [Button] links here..."
+            class="w-full min-h-[52vh] sm:min-h-[56vh] max-h-[72vh] overflow-y-auto p-4 font-mono text-xs sm:text-sm leading-relaxed text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-950/60 focus:outline-none whitespace-pre-wrap break-words"
+          ></div>
+        </div>
+
+        <!-- Status Footer -->
+        <div class="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/90 rounded-b-2xl flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <div id="parseStats" class="flex items-center gap-2">
+            <span>0 folders · 0 copy blocks · 0 buttons</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span id="saveStatusDot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span id="saveStatusText" class="font-medium text-slate-600 dark:text-slate-300">Saved automatically</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Collapsible Formatting Guide (Moved Below Text Data) -->
       <div class="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
         <button
           id="docsToggleBtn"
@@ -192,7 +357,6 @@
         >
           <div class="flex items-center gap-2.5">
             <span class="text-sm font-semibold text-slate-800 dark:text-slate-100">Formatting Guide</span>
-            <!-- Little Down Arrow right next to the title -->
             <svg
               id="docsChevron"
               class="w-4 h-4 text-slate-500 dark:text-slate-400 transition-transform duration-200"
@@ -205,148 +369,120 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
           </div>
-          <span class="text-xs text-slate-400 dark:text-slate-500 hidden sm:inline">How to structure folders, items &amp; buttons</span>
+          <span class="text-xs text-slate-400 dark:text-slate-500 hidden sm:inline">Folders, copy blocks, wraps, inputs &amp; embedded buttons</span>
         </button>
 
         <!-- Documentation Body -->
         <div id="docsContent" class="hidden border-t border-slate-100 dark:border-slate-800 px-4 py-4 bg-slate-50/50 dark:bg-slate-950/50 space-y-4 text-sm text-slate-600 dark:text-slate-300">
           <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            Everything in your library is stored as simple plain text below. You can copy and paste this entire text anywhere to back it up or edit it externally. Changes save automatically.
+            Your library saves automatically—including <strong>bold</strong>, <u>underlined</u>, colored, and highlighted text pasted directly from Google Drive / Google Docs.
           </p>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <!-- Folders Documentation -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- 1. Folders & Standalone Buttons -->
             <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
               <div class="font-semibold text-slate-800 dark:text-slate-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-                Folders &amp; Subfolders
+                Folders &amp; Standalone Buttons
               </div>
-              <p class="text-xs text-slate-500 dark:text-slate-400">Use <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-700 dark:text-slate-200">#</code> for a folder. Add more <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-700 dark:text-slate-200">#</code> signs to nest folders inside folders.</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Use <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">#</code> for folders (<code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">##</code> for subfolders) and <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">[Button]</code> for quick links.</p>
               <pre class="font-mono text-xs bg-slate-900 dark:bg-slate-950 dark:border dark:border-slate-800 text-slate-100 p-2.5 rounded-lg overflow-x-auto leading-relaxed"># Main Folder
 ## Subfolder
-### Deeper Folder</pre>
-            </div>
 
-            <!-- Copy Block Documentation -->
-            <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
-              <div class="font-semibold text-slate-800 dark:text-slate-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-                Copy Blocks
-              </div>
-              <p class="text-xs text-slate-500 dark:text-slate-400">Start with <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-700 dark:text-slate-200">[Copy]</code>. <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-700 dark:text-slate-200">Description:</code> is optional. <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-700 dark:text-slate-200">Text:</code> supports single or multiple lines.</p>
-              <pre class="font-mono text-xs bg-slate-900 dark:bg-slate-950 dark:border dark:border-slate-800 text-slate-100 p-2.5 rounded-lg overflow-x-auto leading-relaxed">[Copy]
-Title: My Greeting
-Description: Optional note
-Text:
-Hello!
-Multiple lines work too.</pre>
-            </div>
-
-            <!-- Custom Buttons Documentation -->
-            <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
-              <div class="font-semibold text-slate-800 dark:text-slate-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                Custom Buttons
-              </div>
-              <p class="text-xs text-slate-500 dark:text-slate-400">Start with <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-700 dark:text-slate-200">[Button]</code>. Put before any folder for top quick-links, or inside any folder.</p>
-              <pre class="font-mono text-xs bg-slate-900 dark:bg-slate-950 dark:border dark:border-slate-800 text-slate-100 p-2.5 rounded-lg overflow-x-auto leading-relaxed">[Button]
+[Button]
 Title: Google Docs
 Link: https://docs.google.com
 Hover: Open my documents</pre>
             </div>
-          </div>
 
-          <div class="text-xs text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 px-3.5 py-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800">
-            <strong class="text-slate-700 dark:text-slate-200">Tip:</strong> If your copied text needs to include lines starting with <code class="font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-1 rounded"># </code>, <code class="font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-1 rounded">[Copy]</code>, or <code class="font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-1 rounded">[Button]</code>, wrap the text block with <code class="font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-1 rounded">"""</code> on the line after <code class="font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-1 rounded">Text:</code> and <code class="font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-1 rounded">"""</code> at the end.
-          </div>
-        </div>
-      </div>
-
-      <!-- Editor Toolbar -->
-      <div class="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
-        <div class="px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/90 flex flex-wrap items-center justify-between gap-2">
-          <!-- Quick Template Insert Buttons -->
-          <div class="flex flex-wrap items-center gap-1.5">
-            <span class="text-xs font-medium text-slate-400 dark:text-slate-500 mr-1 hidden sm:inline">Insert:</span>
-            <button
-              id="insertFolderBtn"
-              type="button"
-              class="px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-[0.98] transition-all"
-            >
-              + Folder
-            </button>
-            <button
-              id="insertCopyBtn"
-              type="button"
-              class="px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-[0.98] transition-all"
-            >
-              + Copy Block
-            </button>
-            <button
-              id="insertButtonBtn"
-              type="button"
-              class="px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-[0.98] transition-all"
-            >
-              + Link Button
-            </button>
-          </div>
-
-          <!-- Utility Actions (Copy All Data / Reset) -->
-          <div class="flex items-center gap-2">
-            <button
-              id="copyAllDataBtn"
-              type="button"
-              class="px-3 py-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/15 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 rounded-lg transition-colors flex items-center gap-1.5"
-            >
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              <span>Copy All Data</span>
-            </button>
-
-            <!-- Inline 2-step Reset Demo Button (avoids confirm()) -->
-            <div id="resetControls" class="flex items-center gap-1">
-              <button
-                id="resetDemoBtn"
-                type="button"
-                class="px-2.5 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg transition-colors"
-              >
-                Load Example
-              </button>
-              <div id="resetConfirmGroup" class="hidden items-center gap-1 bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800/80 px-2 py-1 rounded-lg">
-                <span class="text-xs text-amber-800 dark:text-amber-200 font-medium">Replace?</span>
-                <button id="confirmResetBtn" type="button" class="text-xs font-semibold text-amber-900 dark:text-amber-100 underline hover:text-amber-700 dark:hover:text-amber-300 px-1">Yes</button>
-                <button id="cancelResetBtn" type="button" class="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-1">No</button>
+            <!-- 2. Copy Blocks, { } Wrapping & Embedded Buttons -->
+            <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
+              <div class="font-semibold text-slate-800 dark:text-slate-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                Copy Blocks, { } Wraps &amp; Embedded Buttons
               </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Wrap copied text inside <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">{</code> and <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">}</code>. Use <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">\{</code> or <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">\}</code> for literal braces. Add one or more <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">Button: Title / Link / Hover</code> lines to show buttons right inside the copy card.</p>
+              <pre class="font-mono text-xs bg-slate-900 dark:bg-slate-950 dark:border dark:border-slate-800 text-slate-100 p-2.5 rounded-lg overflow-x-auto leading-relaxed">[Copy]
+Title: Greeting &amp; Portal
+Description: Optional note
+Button: Open Portal / https://example.com / Optional hover tip
+Button: Docs / https://docs.google.com
+Text: {
+Hello! Literal braces look like \{this\}.
+}</pre>
             </div>
-          </div>
-        </div>
 
-        <!-- Textarea Editor -->
-        <div class="relative">
-          <textarea
-            id="dataEditor"
-            spellcheck="false"
-            aria-label="Library Text Data"
-            placeholder="Type your folders, [Copy] blocks, and [Button] links here..."
-            class="w-full min-h-[55vh] sm:min-h-[60vh] p-4 font-mono text-xs sm:text-sm leading-relaxed text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 bg-white dark:bg-slate-950/60 focus:outline-none resize-y"
-          ></textarea>
-        </div>
+            <!-- 3. Current Clipboard Wrap (###) -->
+            <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
+              <div class="font-semibold text-slate-800 dark:text-slate-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                Current Clipboard Wrap (###)
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Place <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">###</code> anywhere inside <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">{ ... }</code> to insert whatever is currently on your clipboard when you click Copy.</p>
+              <pre class="font-mono text-xs bg-slate-900 dark:bg-slate-950 dark:border dark:border-slate-800 text-slate-100 p-2.5 rounded-lg overflow-x-auto leading-relaxed">[Copy]
+Title: Wrap Clipboard in Quotes
+Text: {"###"}</pre>
+            </div>
 
-        <!-- Status Footer -->
-        <div class="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/90 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
-          <div id="parseStats" class="flex items-center gap-2">
-            <span>0 folders · 0 copy blocks · 0 buttons</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span id="saveStatusDot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span id="saveStatusText" class="font-medium text-slate-600 dark:text-slate-300">Saved automatically</span>
+            <!-- 4. Interactive Inputs & Options -->
+            <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2">
+              <div class="font-semibold text-slate-800 dark:text-slate-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                Interactive Inputs &amp; Option Pickers
+              </div>
+              <ul class="text-xs text-slate-500 dark:text-slate-400 space-y-1 list-disc pl-4">
+                <li><code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">[Text]</code> — Prompts you to type text before copying.</li>
+                <li><code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">[Number]</code> — Prompts for numbers &amp; decimals only.</li>
+                <li><code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">[Time]</code> — Opens an interactive clock to pick a time.</li>
+                <li><code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">[Opt 1: Copied 1 / Opt 2: Copied 2]</code> — Choose between options separated by <code class="font-mono">/</code>. Use <code class="font-mono">:</code> to separate label from copied text (omit <code class="font-mono">:</code> to copy the label itself).</li>
+              </ul>
+              <pre class="font-mono text-xs bg-slate-900 dark:bg-slate-950 dark:border dark:border-slate-800 text-slate-100 p-2.5 rounded-lg overflow-x-auto leading-relaxed">[Copy]
+Title: Quick Message
+Text: {Hi [Text], your order #[Number] is ready at [Time]. [Pickup: We will see you inside! / Curbside: Text when outside.]}</pre>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
   </main>
+
+  <!-- Interactive Input / Clock / Options / Paste Modal -->
+  <div
+    id="inputModalBackdrop"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="inputModalTitle"
+    class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4"
+  >
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+        <h3 id="inputModalTitle" class="text-base font-semibold text-slate-900 dark:text-white">Enter Value</h3>
+        <span id="inputModalStepBadge" class="hidden text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/15 px-2.5 py-0.5 rounded-full"></span>
+      </div>
+
+      <div id="inputModalBody" class="p-5 space-y-4">
+        <!-- Dynamic input control injected here -->
+      </div>
+
+      <div class="px-5 py-3.5 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
+        <button
+          id="inputModalCancelBtn"
+          type="button"
+          class="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors min-h-[40px]"
+        >
+          Cancel
+        </button>
+        <button
+          id="inputModalDoneBtn"
+          type="button"
+          class="px-5 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 rounded-xl shadow-sm transition-colors min-h-[40px]"
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Non-intrusive Toast Notification -->
   <div
@@ -371,11 +507,12 @@ Hover: Open my documents</pre>
       // CONSTANTS & LOCAL STORAGE KEYS
       // =========================================================================
       const STORAGE_KEY_DATA = 'copyLibrary_textData_v1';
+      const STORAGE_KEY_HTML_DATA = 'copyLibrary_htmlData_v1';
       const STORAGE_KEY_TAB = 'copyLibrary_activeTab_v1';
       const STORAGE_KEY_COLLAPSED = 'copyLibrary_collapsedFolders_v1';
       const STORAGE_KEY_THEME = 'copyLibrary_theme_v1';
 
-      // Default human-readable starter data so the user immediately sees how everything works
+      // Default human-readable starter data showcasing new { } syntax, ###, inputs & embedded buttons
       const DEFAULT_SAMPLE_DATA = `[Button]
 Title: Google Docs
 Link: https://docs.google.com
@@ -392,29 +529,28 @@ Hover: Check your email inbox
 [Copy]
 Title: Friendly Follow-Up
 Description: Use when checking in after a few days
-Text:
-Hi there,
+Button: Team Calendar / https://calendar.google.com / View upcoming meetings
+Text: {
+Hi [Text],
 
 Just checking in to see if you had any thoughts on my last message. Let me know if you need anything else from my side!
 
 Best,
 Alex
+}
 
 [Copy]
-Title: Quick Thank You
-Text: Thanks so much for sending that over—I really appreciate it!
+Title: Wrap Clipboard in Quotes
+Description: Wraps quotes around whatever is currently copied
+Text: {"###"}
 
-## Meeting Info
+## Quick Inputs & Options
 
 [Copy]
-Title: Personal Meeting Room
-Description: Reusable video call link
-Text: https://meet.example.com/alex-room
-
-[Button]
-Title: Team Calendar
-Link: https://calendar.google.com
-Hover: View upcoming meetings and deadlines
+Title: Appointment Confirmation
+Description: Uses Number, Time clock, and Option picker
+Button: Scheduling Portal / https://example.com / Open booking page
+Text: {Your confirmation #[Number] is scheduled for [Time]. [In-Person: Please arrive 5 minutes early. / Virtual: Join using your video link.]}
 
 # Personal
 ## Everyday Info
@@ -422,25 +558,26 @@ Hover: View upcoming meetings and deadlines
 [Copy]
 Title: Home Wi-Fi Guest Password
 Description: Share with visitors
-Text: SunnyDay-4829
-
-[Copy]
-Title: Shipping Address
-Text:
-Alex Rivera
-742 Evergreen Terrace
-Springfield, IL 62704`;
+Text: {SunnyDay-4829}`;
 
       // =========================================================================
       // APPLICATION STATE
       // =========================================================================
       let rawTextData = '';
-      let activeTab = 'library'; // Default tab is always 'library' (Copy / Paste Library)
+      let rawHtmlData = '';
+      let activeTab = 'library';
       let collapsedFolders = new Set();
       let searchQuery = '';
       let lastParsedData = null;
       let toastTimer = null;
       let saveBadgeTimer = null;
+
+      // Undo / Redo history stacks for the Text Data editor
+      const MAX_HISTORY = 80;
+      let undoStack = [];
+      let redoStack = [];
+      let lastCommittedHtml = '';
+      let historyDebounceTimer = null;
 
       // =========================================================================
       // DOM ELEMENTS
@@ -476,12 +613,17 @@ Springfield, IL 62704`;
       const insertFolderBtn = document.getElementById('insertFolderBtn');
       const insertCopyBtn = document.getElementById('insertCopyBtn');
       const insertButtonBtn = document.getElementById('insertButtonBtn');
+      const undoBtn = document.getElementById('undoBtn');
+      const redoBtn = document.getElementById('redoBtn');
+      const pasteDataBtn = document.getElementById('pasteDataBtn');
       const copyAllDataBtn = document.getElementById('copyAllDataBtn');
 
-      const resetDemoBtn = document.getElementById('resetDemoBtn');
-      const resetConfirmGroup = document.getElementById('resetConfirmGroup');
-      const confirmResetBtn = document.getElementById('confirmResetBtn');
-      const cancelResetBtn = document.getElementById('cancelResetBtn');
+      const inputModalBackdrop = document.getElementById('inputModalBackdrop');
+      const inputModalTitle = document.getElementById('inputModalTitle');
+      const inputModalStepBadge = document.getElementById('inputModalStepBadge');
+      const inputModalBody = document.getElementById('inputModalBody');
+      const inputModalCancelBtn = document.getElementById('inputModalCancelBtn');
+      const inputModalDoneBtn = document.getElementById('inputModalDoneBtn');
 
       const toastEl = document.getElementById('toast');
       const toastMessageEl = document.getElementById('toastMessage');
@@ -509,33 +651,342 @@ Springfield, IL 62704`;
       }
 
       // =========================================================================
-      // CLIPBOARD & TOAST HELPERS
+      // HTML ESCAPING & RICH TEXT SANITIZATION (GOOGLE DRIVE / DOCS SUPPORT)
+      // =========================================================================
+      function escapeHtml(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function plainTextToHtml(plain) {
+        return escapeHtml(plain).replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '<br>');
+      }
+
+      function isDefaultBlackColor(colorStr) {
+        const normalized = (colorStr || '').replace(/\s+/g, '').toLowerCase();
+        return (
+          normalized === '#000' ||
+          normalized === '#000000' ||
+          normalized === 'black' ||
+          normalized === 'rgb(0,0,0)' ||
+          normalized === 'rgba(0,0,0,1)'
+        );
+      }
+
+      function isTransparentColor(colorStr) {
+        const normalized = (colorStr || '').replace(/\s+/g, '').toLowerCase();
+        return (
+          !normalized ||
+          normalized === 'transparent' ||
+          normalized === 'inherit' ||
+          normalized === 'initial' ||
+          normalized === 'rgba(0,0,0,0)' ||
+          normalized === 'rgb(255,255,255)' ||
+          normalized === '#ffffff' ||
+          normalized === '#fff'
+        );
+      }
+
+      /**
+       * Sanitizes HTML pasted from Google Drive / Google Docs while preserving
+       * bold, italic, underline, strikethrough, text colors, and background highlights,
+       * and normalizing block boundaries into clean <br> newlines.
+       */
+      function sanitizeRichHtml(rawHtml) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(rawHtml || '', 'text/html');
+
+        // Remove dangerous or non-content tags completely
+        doc.querySelectorAll('script, style, meta, link, iframe, object, embed, head, title').forEach((el) => el.remove());
+
+        const BLOCK_TAGS = new Set(['P', 'DIV', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE', 'TR']);
+
+        function serializeNode(node, isLastSibling) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            return escapeHtml(node.nodeValue.replace(/\r\n/g, '\n').replace(/\r/g, '\n')).replace(/\n/g, '<br>');
+          }
+
+          if (node.nodeType !== Node.ELEMENT_NODE) {
+            return '';
+          }
+
+          const tag = node.tagName.toUpperCase();
+          if (tag === 'BR') {
+            return '<br>';
+          }
+
+          const childNodes = Array.from(node.childNodes);
+          let inner = '';
+          childNodes.forEach((child, idx) => {
+            inner += serializeNode(child, idx === childNodes.length - 1);
+          });
+
+          // Google Docs often wraps entire clipboard pastes in <b style="font-weight:normal">
+          const styleAttr = node.style || {};
+          const fontWeight = (styleAttr.fontWeight || '').toLowerCase();
+          const fontStyle = (styleAttr.fontStyle || '').toLowerCase();
+          const textDec = ((styleAttr.textDecoration || '') + ' ' + (styleAttr.textDecorationLine || '')).toLowerCase();
+          const bgColor = (styleAttr.backgroundColor || '').trim();
+          const textColor = (styleAttr.color || node.getAttribute('color') || '').trim();
+
+          let isBold = (tag === 'B' || tag === 'STRONG') && fontWeight !== 'normal' && fontWeight !== '400';
+          if (fontWeight === 'bold' || fontWeight === 'bolder' || parseInt(fontWeight, 10) >= 600) {
+            isBold = true;
+          }
+
+          const isItalic = tag === 'I' || tag === 'EM' || fontStyle === 'italic';
+          const isUnderline = tag === 'U' || textDec.includes('underline');
+          const isStrike = tag === 'S' || tag === 'STRIKE' || tag === 'DEL' || textDec.includes('line-through');
+
+          const styles = [];
+          const hasHighlight = !isTransparentColor(bgColor);
+          if (hasHighlight) {
+            styles.push(`background-color: ${bgColor}`);
+            styles.push('border-radius: 3px');
+            styles.push('padding: 0 2px');
+          }
+          if (textColor && (!isDefaultBlackColor(textColor) || hasHighlight)) {
+            styles.push(`color: ${textColor}`);
+          }
+
+          let wrapped = inner;
+          if (isBold && wrapped) wrapped = `<b>${wrapped}</b>`;
+          if (isItalic && wrapped) wrapped = `<i>${wrapped}</i>`;
+          if (isUnderline && wrapped) wrapped = `<u>${wrapped}</u>`;
+          if (isStrike && wrapped) wrapped = `<s>${wrapped}</s>`;
+          if (styles.length > 0 && wrapped) {
+            wrapped = `<span style="${escapeHtml(styles.join('; '))}">${wrapped}</span>`;
+          }
+
+          if (BLOCK_TAGS.has(tag) && !isLastSibling) {
+            // Avoid double <br> if inner already ends with <br>
+            if (!wrapped.endsWith('<br>')) {
+              wrapped += '<br>';
+            }
+          }
+
+          return wrapped;
+        }
+
+        const bodyChildren = Array.from(doc.body.childNodes);
+        let output = '';
+        bodyChildren.forEach((child, idx) => {
+          output += serializeNode(child, idx === bodyChildren.length - 1);
+        });
+
+        return output;
+      }
+
+      /**
+       * Walks a contenteditable container and splits its content into logical lines,
+       * preserving both the plain text and the active inline HTML formatting per line.
+       */
+      function extractEditorLines(containerEl) {
+        const lines = [];
+        let currentPlain = '';
+        let currentHtml = '';
+        const activeTags = []; // [{ open: '<b>', close: '</b>' }]
+
+        function pushLine() {
+          // Close any open inline formatting tags at end of line and re-open on next line
+          let closing = '';
+          for (let i = activeTags.length - 1; i >= 0; i--) {
+            closing += activeTags[i].close;
+          }
+          lines.push({
+            plain: currentPlain,
+            html: currentHtml + closing,
+          });
+          currentPlain = '';
+          currentHtml = activeTags.map((t) => t.open).join('');
+        }
+
+        function appendText(str) {
+          const normalized = str.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+          const parts = normalized.split('\n');
+          for (let i = 0; i < parts.length; i++) {
+            if (i > 0) pushLine();
+            currentPlain += parts[i];
+            currentHtml += escapeHtml(parts[i]);
+          }
+        }
+
+        const BLOCK_TAGS = new Set(['DIV', 'P', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE']);
+
+        function walk(node, isFirstChildInParent) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            appendText(node.nodeValue || '');
+            return;
+          }
+          if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+          const tag = node.tagName.toUpperCase();
+          if (tag === 'BR') {
+            pushLine();
+            return;
+          }
+
+          const isBlock = BLOCK_TAGS.has(tag);
+          if (isBlock && !isFirstChildInParent && (currentPlain.length > 0 || lines.length > 0)) {
+            pushLine();
+          }
+
+          // Determine if this inline element carries formatting we want to keep
+          let tagPair = null;
+          if (!isBlock) {
+            if (tag === 'B' || tag === 'STRONG') {
+              tagPair = { open: '<b>', close: '</b>' };
+            } else if (tag === 'I' || tag === 'EM') {
+              tagPair = { open: '<i>', close: '</i>' };
+            } else if (tag === 'U') {
+              tagPair = { open: '<u>', close: '</u>' };
+            } else if (tag === 'S' || tag === 'STRIKE' || tag === 'DEL') {
+              tagPair = { open: '<s>', close: '</s>' };
+            } else if (tag === 'SPAN' || tag === 'FONT') {
+              const style = node.getAttribute('style') || '';
+              const colorAttr = node.getAttribute('color');
+              let finalStyle = style;
+              if (!finalStyle && colorAttr) {
+                finalStyle = `color: ${colorAttr}`;
+              }
+              if (finalStyle.trim()) {
+                tagPair = {
+                  open: `<span style="${escapeHtml(finalStyle)}">`,
+                  close: '</span>',
+                };
+              }
+            }
+          }
+
+          if (tagPair) {
+            activeTags.push(tagPair);
+            currentHtml += tagPair.open;
+          }
+
+          const children = Array.from(node.childNodes);
+          // Handle browser-inserted <div><br></div> empty lines cleanly
+          if (isBlock && children.length === 1 && children[0].nodeName === 'BR') {
+            // Line break already emitted upon entering block (unless very first block)
+            if (isFirstChildInParent) {
+              pushLine();
+            }
+          } else {
+            children.forEach((child, idx) => walk(child, idx === 0));
+          }
+
+          if (tagPair) {
+            activeTags.pop();
+            currentHtml += tagPair.close;
+          }
+        }
+
+        const topChildren = Array.from(containerEl.childNodes);
+        topChildren.forEach((child, idx) => walk(child, idx === 0));
+        pushLine();
+
+        return lines;
+      }
+
+      // =========================================================================
+      // CLIPBOARD READ / WRITE & TOAST HELPERS
       // =========================================================================
       /**
-       * Copies text to the clipboard using document.execCommand('copy')
-       * so it works reliably even in restricted iframe environments.
+       * Copies both rich HTML and plain text to the clipboard so formatting
+       * (bold, underline, colors, highlights) stays intact in Google Docs / Drive.
        */
-      function copyTextToClipboard(text) {
-        try {
-          const tempTextarea = document.createElement('textarea');
-          tempTextarea.value = text;
-          tempTextarea.setAttribute('readonly', '');
-          tempTextarea.style.position = 'fixed';
-          tempTextarea.style.top = '-9999px';
-          tempTextarea.style.left = '-9999px';
-          document.body.appendChild(tempTextarea);
+      async function copyRichToClipboard(plainText, htmlText) {
+        const safeHtml = htmlText || plainTextToHtml(plainText);
 
-          tempTextarea.focus();
-          tempTextarea.select();
-          tempTextarea.setSelectionRange(0, tempTextarea.value.length);
+        // 1. Try modern Async Clipboard API with both text/html and text/plain
+        if (navigator.clipboard && window.ClipboardItem) {
+          try {
+            const item = new ClipboardItem({
+              'text/html': new Blob([safeHtml], { type: 'text/html' }),
+              'text/plain': new Blob([plainText], { type: 'text/plain' }),
+            });
+            await navigator.clipboard.write([item]);
+            return true;
+          } catch (err) {
+            // Fallback below for restricted iframe contexts
+          }
+        }
+
+        // 2. Fallback: Off-screen contenteditable selection + document.execCommand('copy')
+        try {
+          const tempDiv = document.createElement('div');
+          tempDiv.contentEditable = 'true';
+          tempDiv.style.position = 'fixed';
+          tempDiv.style.top = '-9999px';
+          tempDiv.style.left = '-9999px';
+          tempDiv.style.whiteSpace = 'pre-wrap';
+          tempDiv.innerHTML = safeHtml;
+          document.body.appendChild(tempDiv);
+
+          const range = document.createRange();
+          range.selectNodeContents(tempDiv);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
 
           const success = document.execCommand('copy');
-          document.body.removeChild(tempTextarea);
+          selection.removeAllRanges();
+          document.body.removeChild(tempDiv);
           return success;
         } catch (err) {
-          console.error('Copy failed:', err);
+          console.error('Rich copy failed:', err);
           return false;
         }
+      }
+
+      /**
+       * Attempts to read the user's current clipboard (both HTML & plain text).
+       * Returns { plain, html } if permitted, or null if browser requires manual paste.
+       */
+      async function tryReadClipboard() {
+        if (navigator.clipboard && navigator.clipboard.read) {
+          try {
+            const items = await navigator.clipboard.read();
+            let plain = '';
+            let html = '';
+            for (const item of items) {
+              if (item.types.includes('text/plain')) {
+                const blob = await item.getType('text/plain');
+                plain = await blob.text();
+              }
+              if (item.types.includes('text/html')) {
+                const blob = await item.getType('text/html');
+                const raw = await blob.text();
+                html = sanitizeRichHtml(raw);
+              }
+            }
+            if (plain || html) {
+              return {
+                plain: plain,
+                html: html || plainTextToHtml(plain),
+              };
+            }
+          } catch (err) {
+            // Fall through to readText or manual modal
+          }
+        }
+
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          try {
+            const plain = await navigator.clipboard.readText();
+            return {
+              plain: plain,
+              html: plainTextToHtml(plain),
+            };
+          } catch (err) {
+            return null;
+          }
+        }
+
+        return null;
       }
 
       /**
@@ -554,40 +1005,207 @@ Springfield, IL 62704`;
       }
 
       // =========================================================================
-      // URL SANITIZATION HELPER
+      // URL & EMBEDDED BUTTON PARSING HELPERS
       // =========================================================================
       function normalizeSafeUrl(rawUrl) {
         const trimmed = (rawUrl || '').trim();
         if (!trimmed) return '#';
 
-        // Prevent unsafe schemes like javascript: or data:
         const lower = trimmed.toLowerCase();
         if (lower.startsWith('javascript:') || lower.startsWith('data:') || lower.startsWith('vbscript:')) {
           return '#';
         }
 
-        // Automatically prepend https:// if the user typed e.g. "google.com"
         if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
           return 'https://' + trimmed;
         }
         return trimmed;
       }
 
+      /**
+       * Parses an embedded button string formatted as "Title / Link / Hover Text"
+       * safely handling slashes inside URLs (e.g. https://docs.google.com/u/0).
+       */
+      function parseEmbeddedButtonSpec(spec) {
+        const trimmed = (spec || '').trim();
+        if (!trimmed) return null;
+
+        // Find separator between Title and Link (Title shouldn't contain '://')
+        const firstSlashIdx = trimmed.indexOf('/');
+        if (firstSlashIdx === -1) {
+          return { title: trimmed, link: '#', hover: '' };
+        }
+
+        const title = trimmed.slice(0, firstSlashIdx).trim();
+        const rest = trimmed.slice(firstSlashIdx + 1).trim();
+        if (!rest) {
+          return title ? { title, link: '#', hover: '' } : null;
+        }
+
+        // Look for separator between Link and optional Hover Text
+        let link = rest;
+        let hover = '';
+
+        // Prefer " / " (slash with surrounding whitespace) so URLs with paths stay intact
+        const spacedSlashMatch = rest.match(/\s+\/\s+/);
+        if (spacedSlashMatch) {
+          const idx = spacedSlashMatch.index;
+          link = rest.slice(0, idx).trim();
+          hover = rest.slice(idx + spacedSlashMatch[0].length).trim();
+        } else if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rest)) {
+          // If no protocol is present, allow compact "Link/Hover"
+          const secondSlashIdx = rest.indexOf('/');
+          if (secondSlashIdx !== -1) {
+            link = rest.slice(0, secondSlashIdx).trim();
+            hover = rest.slice(secondSlashIdx + 1).trim();
+          }
+        }
+
+        if (!title && !link) return null;
+        return {
+          title: title || link,
+          link: link || '#',
+          hover: hover,
+        };
+      }
+
       // =========================================================================
-      // HUMAN-READABLE TEXT DATA PARSER
+      // BRACE-WRAPPED & RICH-TEXT LIBRARY PARSER
       // =========================================================================
       /**
-       * Parses plain human-readable text into:
-       * {
-       *   rootButtons: Array<{ title, link, hover }>,
-       *   rootItems: Array<{ title, description, text }>,
-       *   folders: Array<FolderNode>,
-       *   stats: { folders, items, buttons }
-       * }
-       *
-       * FolderNode: { id, name, level, buttons, items, subfolders }
+       * Scans a single line (both plain & html) starting at `startIdx` inside a `{ ... }` block
+       * until it hits an unescaped `}` or the end of the line.
+       * Unescapes `\{` -> `{`, `\}` -> `}`, and `\\` -> `\`.
        */
-      function parseLibraryText(inputText) {
+      function consumeBraceSegment(plainStr, htmlStr, startIdx) {
+        let outPlain = '';
+        let i = startIdx;
+        let closed = false;
+
+        while (i < plainStr.length) {
+          const ch = plainStr[i];
+          if (ch === '\\' && i + 1 < plainStr.length) {
+            const next = plainStr[i + 1];
+            if (next === '{' || next === '}' || next === '\\') {
+              outPlain += next;
+              i += 2;
+              continue;
+            }
+          }
+          if (ch === '}') {
+            closed = true;
+            i += 1;
+            break;
+          }
+          outPlain += ch;
+          i += 1;
+        }
+
+        // Process HTML counterpart identically while preserving inline tags
+        let outHtml = '';
+        let h = 0;
+        let plainPos = 0;
+        let inTag = false;
+        let inEntity = false;
+        let entityBuf = '';
+
+        function decodeEntity(ent) {
+          if (ent === '&amp;') return '&';
+          if (ent === '&lt;') return '<';
+          if (ent === '&gt;') return '>';
+          if (ent === '&quot;') return '"';
+          if (ent === '&#39;' || ent === '&apos;') return "'";
+          return ent;
+        }
+
+        while (h < htmlStr.length) {
+          const c = htmlStr[h];
+
+          if (inTag) {
+            outHtml += c;
+            if (c === '>') inTag = false;
+            h += 1;
+            continue;
+          }
+
+          if (c === '<') {
+            inTag = true;
+            outHtml += c;
+            h += 1;
+            continue;
+          }
+
+          if (inEntity) {
+            entityBuf += c;
+            if (c === ';') {
+              inEntity = false;
+              const decoded = decodeEntity(entityBuf);
+              if (plainPos >= startIdx && plainPos < i) {
+                if (!(closed && plainPos === i - 1)) {
+                  outHtml += entityBuf;
+                }
+              }
+              plainPos += decoded.length;
+              entityBuf = '';
+            }
+            h += 1;
+            continue;
+          }
+
+          if (c === '&') {
+            inEntity = true;
+            entityBuf = '&';
+            h += 1;
+            continue;
+          }
+
+          // Visible character at plainPos
+          if (plainPos >= startIdx) {
+            if (closed && plainPos === i - 1) {
+              // Closing '}' — stop emitting characters, only close any trailing open tags
+              plainPos += 1;
+              h += 1;
+              break;
+            }
+            if (c === '\\' && plainPos + 1 < plainStr.length) {
+              const nextChar = plainStr[plainPos + 1];
+              if (nextChar === '{' || nextChar === '}' || nextChar === '\\') {
+                // Skip backslash in HTML output so escaped char emits next
+                plainPos += 1;
+                h += 1;
+                continue;
+              }
+            }
+            outHtml += c;
+          }
+
+          plainPos += 1;
+          h += 1;
+        }
+
+        // Append any remaining closing HTML tags so tags stay balanced
+        while (h < htmlStr.length) {
+          if (htmlStr[h] === '<') {
+            const closeIdx = htmlStr.indexOf('>', h);
+            if (closeIdx !== -1) {
+              const tagChunk = htmlStr.slice(h, closeIdx + 1);
+              if (tagChunk.startsWith('</')) {
+                outHtml += tagChunk;
+              }
+              h = closeIdx + 1;
+              continue;
+            }
+          }
+          h += 1;
+        }
+
+        return { plain: outPlain, html: outHtml, closed };
+      }
+
+      /**
+       * Parses an array of `{ plain, html }` lines into folders, copy blocks, and buttons.
+       */
+      function parseLibraryLines(lineObjects) {
         const result = {
           rootButtons: [],
           rootItems: [],
@@ -595,45 +1213,43 @@ Springfield, IL 62704`;
           stats: { folders: 0, items: 0, buttons: 0 },
         };
 
-        const lines = (inputText || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-        const folderStack = []; // [{ level, folder }]
+        const folderStack = [];
         const seenFolderIds = {};
-
         let currentBlock = null;
 
         function getCurrentTarget() {
-          if (folderStack.length > 0) {
-            return folderStack[folderStack.length - 1].folder;
-          }
-          return null;
+          return folderStack.length > 0 ? folderStack[folderStack.length - 1].folder : null;
         }
 
         function finalizeCurrentBlock() {
           if (!currentBlock) return;
-
           const target = getCurrentTarget();
 
           if (currentBlock.type === 'copy') {
-            const textLines = currentBlock.textLines.slice();
+            const plainLines = currentBlock.plainLines.slice();
+            const htmlLines = currentBlock.htmlLines.slice();
 
-            // Trim leading/trailing blank lines unless explicitly triple-quoted
-            if (!currentBlock.usedTripleQuote) {
-              while (textLines.length > 0 && textLines[0].trim() === '') {
-                textLines.shift();
+            // If fallback unbraced mode was used, trim leading/trailing blank lines
+            if (!currentBlock.usedBraces) {
+              while (plainLines.length > 0 && plainLines[0].trim() === '') {
+                plainLines.shift();
+                htmlLines.shift();
               }
-              while (textLines.length > 0 && textLines[textLines.length - 1].trim() === '') {
-                textLines.pop();
+              while (plainLines.length > 0 && plainLines[plainLines.length - 1].trim() === '') {
+                plainLines.pop();
+                htmlLines.pop();
               }
             }
 
             const finalItem = {
               title: (currentBlock.data.title || '').trim(),
               description: (currentBlock.data.description || '').trim(),
-              text: textLines.join('\n'),
+              buttons: currentBlock.data.buttons || [],
+              text: plainLines.join('\n'),
+              html: htmlLines.join('<br>'),
             };
 
-            // Only store non-empty blocks
-            if (finalItem.title || finalItem.text || finalItem.description) {
+            if (finalItem.title || finalItem.text || finalItem.description || finalItem.buttons.length > 0) {
               if (!finalItem.title) finalItem.title = 'Untitled';
               if (target) {
                 target.items.push(finalItem);
@@ -663,22 +1279,29 @@ Springfield, IL 62704`;
           currentBlock = null;
         }
 
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
+        for (let i = 0; i < lineObjects.length; i++) {
+          const { plain: line, html: lineHtml } = lineObjects[i];
           const trimmed = line.trim();
 
-          // 1. Inside an explicit triple-quoted multiline text block
-          if (currentBlock && currentBlock.type === 'copy' && currentBlock.inTripleQuote) {
-            if (trimmed === '"""') {
-              currentBlock.inTripleQuote = false;
+          // 1. Inside an open `{ ... }` brace block in a [Copy] block
+          if (currentBlock && currentBlock.type === 'copy' && currentBlock.inBrace) {
+            const seg = consumeBraceSegment(line, lineHtml, 0);
+            if (seg.closed) {
+              // If closing '}' was on its own line (e.g., "}"), don't add an extra trailing blank line
+              if (!(trimmed === '}' && currentBlock.plainLines.length > 0)) {
+                currentBlock.plainLines.push(seg.plain);
+                currentBlock.htmlLines.push(seg.html);
+              }
+              currentBlock.inBrace = false;
               currentBlock.inText = false;
             } else {
-              currentBlock.textLines.push(line);
+              currentBlock.plainLines.push(seg.plain);
+              currentBlock.htmlLines.push(seg.html);
             }
             continue;
           }
 
-          // 2. Check for Folder Header: "# Folder", "## Subfolder", etc.
+          // 2. Folder Header: "# Folder", "## Subfolder", etc.
           const folderMatch = line.match(/^(#{1,6})\s+(.+)$/);
           if (folderMatch) {
             finalizeCurrentBlock();
@@ -686,12 +1309,10 @@ Springfield, IL 62704`;
             const level = folderMatch[1].length;
             const name = folderMatch[2].trim();
 
-            // Pop folders of equal or deeper level so nesting matches # count
             while (folderStack.length > 0 && folderStack[folderStack.length - 1].level >= level) {
               folderStack.pop();
             }
 
-            // Build a stable ID based on folder path so open/closed states persist across edits
             const pathKey = folderStack.map((entry) => entry.folder.name).concat(name).join(' > ');
             seenFolderIds[pathKey] = (seenFolderIds[pathKey] || 0) + 1;
             const folderId = pathKey + (seenFolderIds[pathKey] > 1 ? ` #${seenFolderIds[pathKey]}` : '');
@@ -716,16 +1337,17 @@ Springfield, IL 62704`;
             continue;
           }
 
-          // 3. Check for Block Markers: [Copy] (or [Item]/[Text]) and [Button] (or [Link])
+          // 3. Block Markers: [Copy] and [Button]
           if (/^\[(copy|item|snippet|text)\]$/i.test(trimmed)) {
             finalizeCurrentBlock();
             currentBlock = {
               type: 'copy',
-              data: { title: '', description: '' },
+              data: { title: '', description: '', buttons: [] },
               inText: false,
-              inTripleQuote: false,
-              usedTripleQuote: false,
-              textLines: [],
+              inBrace: false,
+              usedBraces: false,
+              plainLines: [],
+              htmlLines: [],
             };
             continue;
           }
@@ -739,16 +1361,17 @@ Springfield, IL 62704`;
             continue;
           }
 
-          // 4. Optional horizontal separator line "---" ends current block cleanly
+          // 4. Optional separator "---"
           if (trimmed === '---' && currentBlock) {
             finalizeCurrentBlock();
             continue;
           }
 
-          // 5. Parse fields inside active [Copy] block
+          // 5. Inside [Copy] block
           if (currentBlock && currentBlock.type === 'copy') {
-            if (currentBlock.inText) {
-              currentBlock.textLines.push(line);
+            if (currentBlock.inText && !currentBlock.usedBraces) {
+              currentBlock.plainLines.push(line);
+              currentBlock.htmlLines.push(lineHtml);
               continue;
             }
 
@@ -766,36 +1389,53 @@ Springfield, IL 62704`;
               continue;
             }
 
-            const textMatch = line.match(/^text\s*:\s*(.*)$/i);
-            if (textMatch) {
-              const remainder = textMatch[1];
-              const remainderTrimmed = remainder.trim();
-
-              if (remainderTrimmed === '"""') {
-                currentBlock.inTripleQuote = true;
-                currentBlock.usedTripleQuote = true;
-                currentBlock.inText = true;
-              } else if (remainderTrimmed.startsWith('"""') && remainderTrimmed.endsWith('"""') && remainderTrimmed.length >= 6) {
-                currentBlock.usedTripleQuote = true;
-                currentBlock.textLines.push(remainderTrimmed.slice(3, -3));
-              } else {
-                currentBlock.inText = true;
-                if (remainder.length > 0) {
-                  currentBlock.textLines.push(remainder);
-                }
+            const embeddedBtnMatch = line.match(/^(?:button|link)\s*:\s*(.*)$/i);
+            if (embeddedBtnMatch) {
+              const parsedBtn = parseEmbeddedButtonSpec(embeddedBtnMatch[1]);
+              if (parsedBtn) {
+                currentBlock.data.buttons.push(parsedBtn);
               }
               continue;
             }
 
-            // If a line appears before Text: without a label, treat it gracefully as starting text if Title exists
-            if (currentBlock.data.title) {
-              currentBlock.inText = true;
-              currentBlock.textLines.push(line);
+            const textMatch = line.match(/^text\s*:\s*(.*)$/i);
+            if (textMatch) {
+              const prefixLen = line.indexOf(':') + 1;
+              const afterColon = line.slice(prefixLen);
+              const firstNonSpaceOffset = afterColon.search(/\S/);
+
+              if (firstNonSpaceOffset !== -1 && afterColon[firstNonSpaceOffset] === '{') {
+                currentBlock.usedBraces = true;
+                const openBraceIdx = prefixLen + firstNonSpaceOffset;
+                const seg = consumeBraceSegment(line, lineHtml, openBraceIdx + 1);
+                if (seg.closed) {
+                  currentBlock.plainLines.push(seg.plain);
+                  currentBlock.htmlLines.push(seg.html);
+                  currentBlock.inBrace = false;
+                  currentBlock.inText = false;
+                } else {
+                  // Only push first line if there was content after '{' on the same line
+                  if (seg.plain.length > 0) {
+                    currentBlock.plainLines.push(seg.plain);
+                    currentBlock.htmlLines.push(seg.html);
+                  }
+                  currentBlock.inBrace = true;
+                  currentBlock.inText = true;
+                }
+              } else {
+                // Fallback if Text: did not use { ... }
+                currentBlock.inText = true;
+                if (afterColon.trim().length > 0) {
+                  currentBlock.plainLines.push(afterColon.trim());
+                  currentBlock.htmlLines.push(lineHtml);
+                }
+              }
+              continue;
             }
             continue;
           }
 
-          // 6. Parse fields inside active [Button] block
+          // 6. Inside standalone [Button] block
           if (currentBlock && currentBlock.type === 'button') {
             if (trimmed === '') continue;
 
@@ -819,10 +1459,634 @@ Springfield, IL 62704`;
           }
         }
 
-        // Finalize any trailing block at end of file
         finalizeCurrentBlock();
-
         return result;
+      }
+
+      // =========================================================================
+      // INTERACTIVE INPUTS, ANALOG CLOCK & ### CLIPBOARD RESOLUTION
+      // =========================================================================
+      /**
+       * Parses a bracket tag like:
+       * - [Text] -> { kind: 'text' }
+       * - [Number] -> { kind: 'number' }
+       * - [Time] -> { kind: 'time' }
+       * - [Option 1: Copied 1 / Option 2: Copied 2] -> { kind: 'options', options: [...] }
+       */
+      function parseInputTag(rawInner) {
+        const inner = (rawInner || '').trim();
+        const lower = inner.toLowerCase();
+
+        if (lower === 'text') {
+          return { kind: 'text', label: 'Enter Text' };
+        }
+        if (lower === 'number') {
+          return { kind: 'number', label: 'Enter Number' };
+        }
+        if (lower === 'time') {
+          return { kind: 'time', label: 'Select Time' };
+        }
+
+        // Options list separated by "/"
+        const rawParts = inner.split('/').map((s) => s.trim()).filter(Boolean);
+        const options = rawParts.map((part) => {
+          const colonIdx = part.indexOf(':');
+          if (colonIdx !== -1) {
+            return {
+              display: part.slice(0, colonIdx).trim(),
+              value: part.slice(colonIdx + 1).trim(),
+            };
+          }
+          return {
+            display: part,
+            value: part,
+          };
+        });
+
+        return {
+          kind: 'options',
+          label: 'Choose an Option',
+          options: options.length > 0 ? options : [{ display: inner, value: inner }],
+        };
+      }
+
+      /**
+       * Finds all unescaped [Input] tags inside a template string.
+       */
+      function findInputPlaceholders(plainText) {
+        const matches = [];
+        let i = 0;
+        while (i < plainText.length) {
+          if (plainText[i] === '\\' && i + 1 < plainText.length) {
+            i += 2;
+            continue;
+          }
+          if (plainText[i] === '[') {
+            const closeIdx = plainText.indexOf(']', i + 1);
+            if (closeIdx !== -1) {
+              const fullToken = plainText.slice(i, closeIdx + 1);
+              const inner = plainText.slice(i + 1, closeIdx);
+              matches.push({
+                token: fullToken,
+                spec: parseInputTag(inner),
+              });
+              i = closeIdx + 1;
+              continue;
+            }
+          }
+          i += 1;
+        }
+        return matches;
+      }
+
+      /**
+       * Renders an interactive analog clock + digital time controls inside `container`
+       * and returns a getter function `getFormattedTime()`.
+       */
+      function mountInteractiveClock(container) {
+        const now = new Date();
+        let hours24 = now.getHours();
+        let minutes = now.getMinutes();
+        let isPm = hours24 >= 12;
+        let hour12 = hours24 % 12;
+        if (hour12 === 0) hour12 = 12;
+        let activeHand = 'hour'; // 'hour' or 'minute'
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex flex-col items-center space-y-4';
+
+        // Digital Readout & Mode Switcher
+        const topControls = document.createElement('div');
+        topControls.className = 'flex items-center justify-center gap-2';
+
+        const hourBtn = document.createElement('button');
+        hourBtn.type = 'button';
+        hourBtn.className = 'px-3 py-1.5 rounded-xl text-2xl font-mono font-bold transition-colors';
+
+        const colonSpan = document.createElement('span');
+        colonSpan.className = 'text-2xl font-mono font-bold text-slate-400';
+        colonSpan.textContent = ':';
+
+        const minBtn = document.createElement('button');
+        minBtn.type = 'button';
+        minBtn.className = 'px-3 py-1.5 rounded-xl text-2xl font-mono font-bold transition-colors';
+
+        const amPmGroup = document.createElement('div');
+        amPmGroup.className = 'flex flex-col bg-slate-100 dark:bg-slate-800 p-1 rounded-xl ml-1';
+
+        const amBtn = document.createElement('button');
+        amBtn.type = 'button';
+        amBtn.textContent = 'AM';
+        amBtn.className = 'px-2.5 py-0.5 text-xs font-bold rounded-lg transition-colors';
+
+        const pmBtn = document.createElement('button');
+        pmBtn.type = 'button';
+        pmBtn.textContent = 'PM';
+        pmBtn.className = 'px-2.5 py-0.5 text-xs font-bold rounded-lg transition-colors';
+
+        amPmGroup.appendChild(amBtn);
+        amPmGroup.appendChild(pmBtn);
+
+        topControls.appendChild(hourBtn);
+        topControls.appendChild(colonSpan);
+        topControls.appendChild(minBtn);
+        topControls.appendChild(amPmGroup);
+
+        // SVG Analog Clock Dial
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('viewBox', '0 0 220 220');
+        svg.setAttribute('class', 'w-52 h-52 select-none cursor-pointer touch-none');
+
+        const dialCircle = document.createElementNS(svgNS, 'circle');
+        dialCircle.setAttribute('cx', '110');
+        dialCircle.setAttribute('cy', '110');
+        dialCircle.setAttribute('r', '100');
+        dialCircle.setAttribute('class', 'fill-slate-100 dark:fill-slate-800 stroke-slate-200 dark:stroke-slate-700');
+        dialCircle.setAttribute('stroke-width', '2');
+        svg.appendChild(dialCircle);
+
+        // Minute ticks & Hour numbers
+        for (let m = 0; m < 60; m++) {
+          const angle = (m * 6 - 90) * (Math.PI / 180);
+          const isHourTick = m % 5 === 0;
+          const rOuter = 94;
+          const rInner = isHourTick ? 87 : 91;
+          const tick = document.createElementNS(svgNS, 'line');
+          tick.setAttribute('x1', String(110 + rInner * Math.cos(angle)));
+          tick.setAttribute('y1', String(110 + rInner * Math.sin(angle)));
+          tick.setAttribute('x2', String(110 + rOuter * Math.cos(angle)));
+          tick.setAttribute('y2', String(110 + rOuter * Math.sin(angle)));
+          tick.setAttribute('class', isHourTick ? 'stroke-slate-400 dark:stroke-slate-500' : 'stroke-slate-300 dark:stroke-slate-700');
+          tick.setAttribute('stroke-width', isHourTick ? '2' : '1');
+          svg.appendChild(tick);
+        }
+
+        for (let h = 1; h <= 12; h++) {
+          const angle = (h * 30 - 90) * (Math.PI / 180);
+          const rNum = 73;
+          const txt = document.createElementNS(svgNS, 'text');
+          txt.setAttribute('x', String(110 + rNum * Math.cos(angle)));
+          txt.setAttribute('y', String(110 + rNum * Math.sin(angle)));
+          txt.setAttribute('text-anchor', 'middle');
+          txt.setAttribute('dominant-baseline', 'central');
+          txt.setAttribute('class', 'fill-slate-700 dark:fill-slate-200 text-xs font-semibold pointer-events-none');
+          txt.textContent = String(h);
+          svg.appendChild(txt);
+        }
+
+        // Hour hand
+        const hourHand = document.createElementNS(svgNS, 'line');
+        hourHand.setAttribute('x1', '110');
+        hourHand.setAttribute('y1', '110');
+        hourHand.setAttribute('stroke-linecap', 'round');
+        hourHand.setAttribute('stroke-width', '5');
+        hourHand.setAttribute('class', 'stroke-slate-800 dark:stroke-slate-100');
+        svg.appendChild(hourHand);
+
+        // Minute hand
+        const minHand = document.createElementNS(svgNS, 'line');
+        minHand.setAttribute('x1', '110');
+        minHand.setAttribute('y1', '110');
+        minHand.setAttribute('stroke-linecap', 'round');
+        minHand.setAttribute('stroke-width', '3');
+        minHand.setAttribute('class', 'stroke-indigo-600 dark:stroke-indigo-400');
+        svg.appendChild(minHand);
+
+        // Knob at active hand tip
+        const activeKnob = document.createElementNS(svgNS, 'circle');
+        activeKnob.setAttribute('r', '12');
+        activeKnob.setAttribute('class', 'fill-indigo-600/20 dark:fill-indigo-400/25 stroke-indigo-600 dark:stroke-indigo-400');
+        activeKnob.setAttribute('stroke-width', '2');
+        svg.appendChild(activeKnob);
+
+        // Center pivot
+        const centerDot = document.createElementNS(svgNS, 'circle');
+        centerDot.setAttribute('cx', '110');
+        centerDot.setAttribute('cy', '110');
+        centerDot.setAttribute('r', '5');
+        centerDot.setAttribute('class', 'fill-indigo-600 dark:fill-indigo-400');
+        svg.appendChild(centerDot);
+
+        const hintText = document.createElement('p');
+        hintText.className = 'text-xs text-slate-400 dark:text-slate-500';
+        hintText.textContent = 'Click or drag the clock face to adjust hours & minutes';
+
+        function renderClock() {
+          hourBtn.textContent = String(hour12).padStart(2, '0');
+          minBtn.textContent = String(minutes).padStart(2, '0');
+
+          const activePill = ['bg-indigo-100', 'dark:bg-indigo-500/25', 'text-indigo-700', 'dark:text-indigo-300'];
+          const inactivePill = ['bg-slate-100', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300'];
+
+          if (activeHand === 'hour') {
+            hourBtn.classList.add(...activePill);
+            hourBtn.classList.remove(...inactivePill);
+            minBtn.classList.add(...inactivePill);
+            minBtn.classList.remove(...activePill);
+          } else {
+            minBtn.classList.add(...activePill);
+            minBtn.classList.remove(...inactivePill);
+            hourBtn.classList.add(...inactivePill);
+            hourBtn.classList.remove(...activePill);
+          }
+
+          const amPmActive = ['bg-white', 'dark:bg-slate-700', 'text-slate-900', 'dark:text-white', 'shadow-xs'];
+          const amPmInactive = ['text-slate-500', 'dark:text-slate-400'];
+
+          if (!isPm) {
+            amBtn.classList.add(...amPmActive);
+            amBtn.classList.remove(...amPmInactive);
+            pmBtn.classList.remove(...amPmActive);
+            pmBtn.classList.add(...amPmInactive);
+          } else {
+            pmBtn.classList.add(...amPmActive);
+            pmBtn.classList.remove(...amPmInactive);
+            amBtn.classList.remove(...amPmActive);
+            amBtn.classList.add(...amPmInactive);
+          }
+
+          const hourAngle = (((hour12 % 12) + minutes / 60) * 30 - 90) * (Math.PI / 180);
+          const hx = 110 + 50 * Math.cos(hourAngle);
+          const hy = 110 + 50 * Math.sin(hourAngle);
+          hourHand.setAttribute('x2', String(hx));
+          hourHand.setAttribute('y2', String(hy));
+
+          const minAngle = (minutes * 6 - 90) * (Math.PI / 180);
+          const mx = 110 + 76 * Math.cos(minAngle);
+          const my = 110 + 76 * Math.sin(minAngle);
+          minHand.setAttribute('x2', String(mx));
+          minHand.setAttribute('y2', String(my));
+
+          if (activeHand === 'hour') {
+            activeKnob.setAttribute('cx', String(hx));
+            activeKnob.setAttribute('cy', String(hy));
+          } else {
+            activeKnob.setAttribute('cx', String(mx));
+            activeKnob.setAttribute('cy', String(my));
+          }
+        }
+
+        function updateFromPointer(clientX, clientY, autoAdvanceToMinute) {
+          const rect = svg.getBoundingClientRect();
+          const cx = rect.left + rect.width / 2;
+          const cy = rect.top + rect.height / 2;
+          const dx = clientX - cx;
+          const dy = clientY - cy;
+          let deg = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+          if (deg < 0) deg += 360;
+
+          if (activeHand === 'hour') {
+            let h = Math.round(deg / 30) % 12;
+            if (h === 0) h = 12;
+            hour12 = h;
+            if (autoAdvanceToMinute) {
+              activeHand = 'minute';
+            }
+          } else {
+            let m = Math.round(deg / 6) % 60;
+            minutes = m;
+          }
+          renderClock();
+        }
+
+        let isDragging = false;
+        svg.addEventListener('pointerdown', (e) => {
+          isDragging = true;
+          svg.setPointerCapture(e.pointerId);
+          updateFromPointer(e.clientX, e.clientY, false);
+        });
+        svg.addEventListener('pointermove', (e) => {
+          if (!isDragging) return;
+          updateFromPointer(e.clientX, e.clientY, false);
+        });
+        svg.addEventListener('pointerup', (e) => {
+          if (!isDragging) return;
+          isDragging = false;
+          if (activeHand === 'hour') {
+            activeHand = 'minute';
+            renderClock();
+          }
+        });
+
+        hourBtn.addEventListener('click', () => {
+          activeHand = 'hour';
+          renderClock();
+        });
+        minBtn.addEventListener('click', () => {
+          activeHand = 'minute';
+          renderClock();
+        });
+        amBtn.addEventListener('click', () => {
+          isPm = false;
+          renderClock();
+        });
+        pmBtn.addEventListener('click', () => {
+          isPm = true;
+          renderClock();
+        });
+
+        wrapper.appendChild(topControls);
+        wrapper.appendChild(svg);
+        wrapper.appendChild(hintText);
+        container.appendChild(wrapper);
+        renderClock();
+
+        return function getFormattedTime() {
+          return `${hour12}:${String(minutes).padStart(2, '0')} ${isPm ? 'PM' : 'AM'}`;
+        };
+      }
+
+      /**
+       * Opens the interactive modal for one prompt step (`text`, `number`, `time`, `options`, or `clipboard`).
+       * Resolves with `{ plain, html }` when Done is clicked, or `null` when Cancel is clicked.
+       */
+      function promptInputModal(spec, stepIndex, totalSteps) {
+        return new Promise((resolve) => {
+          inputModalTitle.textContent = spec.label || 'Enter Value';
+          if (totalSteps > 1) {
+            inputModalStepBadge.textContent = `${stepIndex + 1} of ${totalSteps}`;
+            inputModalStepBadge.classList.remove('hidden');
+          } else {
+            inputModalStepBadge.classList.add('hidden');
+          }
+
+          inputModalBody.innerHTML = '';
+          let getResult = () => ({ plain: '', html: '' });
+          let focusTarget = null;
+
+          if (spec.kind === 'text') {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'Type text here...';
+            input.className =
+              'w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500';
+            input.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                finish(true);
+              }
+            });
+            inputModalBody.appendChild(input);
+            focusTarget = input;
+            getResult = () => ({ plain: input.value, html: escapeHtml(input.value) });
+          } else if (spec.kind === 'number') {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.setAttribute('inputmode', 'decimal');
+            input.placeholder = '0';
+            input.className =
+              'w-full px-3.5 py-2.5 text-base font-mono bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500';
+
+            // Strictly allow optional leading '-', digits 0-9, and a single '.'
+            input.addEventListener('input', () => {
+              let val = input.value;
+              let cleaned = '';
+              let hasDecimal = false;
+              for (let i = 0; i < val.length; i++) {
+                const c = val[i];
+                if (c === '-' && i === 0) {
+                  cleaned += c;
+                } else if (c >= '0' && c <= '9') {
+                  cleaned += c;
+                } else if (c === '.' && !hasDecimal) {
+                  cleaned += c;
+                  hasDecimal = true;
+                }
+              }
+              if (val !== cleaned) {
+                input.value = cleaned;
+              }
+            });
+
+            input.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                finish(true);
+              }
+            });
+
+            const hint = document.createElement('p');
+            hint.className = 'text-xs text-slate-400 dark:text-slate-500';
+            hint.textContent = 'Numbers and decimals only';
+
+            inputModalBody.appendChild(input);
+            inputModalBody.appendChild(hint);
+            focusTarget = input;
+            getResult = () => ({ plain: input.value, html: escapeHtml(input.value) });
+          } else if (spec.kind === 'time') {
+            const getClockTime = mountInteractiveClock(inputModalBody);
+            getResult = () => {
+              const t = getClockTime();
+              return { plain: t, html: escapeHtml(t) };
+            };
+          } else if (spec.kind === 'options') {
+            let selectedIdx = 0;
+            const list = document.createElement('div');
+            list.className = 'space-y-2 max-h-64 overflow-y-auto';
+
+            const optionButtons = spec.options.map((opt, idx) => {
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className =
+                'w-full text-left px-4 py-3 rounded-xl border transition-all flex items-center justify-between gap-3';
+
+              const textWrap = document.createElement('div');
+              textWrap.className = 'min-w-0 flex-1';
+
+              const titleSpan = document.createElement('div');
+              titleSpan.className = 'text-sm font-semibold text-slate-900 dark:text-slate-100 break-words';
+              titleSpan.textContent = opt.display;
+              textWrap.appendChild(titleSpan);
+
+              if (opt.value !== opt.display) {
+                const subSpan = document.createElement('div');
+                subSpan.className = 'text-xs text-slate-500 dark:text-slate-400 mt-0.5 break-words';
+                subSpan.textContent = opt.value;
+                textWrap.appendChild(subSpan);
+              }
+
+              const radioDot = document.createElement('div');
+              radioDot.className = 'w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center';
+
+              btn.appendChild(textWrap);
+              btn.appendChild(radioDot);
+
+              btn.addEventListener('click', () => {
+                selectedIdx = idx;
+                updateSelectionStyles();
+              });
+
+              btn.addEventListener('dblclick', () => {
+                selectedIdx = idx;
+                updateSelectionStyles();
+                finish(true);
+              });
+
+              list.appendChild(btn);
+              return { btn, radioDot };
+            });
+
+            function updateSelectionStyles() {
+              optionButtons.forEach(({ btn, radioDot }, idx) => {
+                const active = idx === selectedIdx;
+                if (active) {
+                  btn.className =
+                    'w-full text-left px-4 py-3 rounded-xl border-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-500/15 transition-all flex items-center justify-between gap-3';
+                  radioDot.className =
+                    'w-4 h-4 rounded-full border-2 border-indigo-600 dark:border-indigo-400 bg-indigo-600 dark:bg-indigo-400 shrink-0';
+                } else {
+                  btn.className =
+                    'w-full text-left px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800/60 transition-all flex items-center justify-between gap-3';
+                  radioDot.className = 'w-4 h-4 rounded-full border-2 border-slate-300 dark:border-slate-600 shrink-0';
+                }
+              });
+            }
+
+            updateSelectionStyles();
+            inputModalBody.appendChild(list);
+            getResult = () => {
+              const chosen = spec.options[selectedIdx] || { value: '' };
+              return { plain: chosen.value, html: escapeHtml(chosen.value) };
+            };
+          } else if (spec.kind === 'clipboard_fallback') {
+            let capturedHtml = '';
+            const desc = document.createElement('p');
+            desc.className = 'text-xs text-slate-500 dark:text-slate-400';
+            desc.textContent = spec.description || 'Press Ctrl+V (or Cmd+V) below to paste your clipboard, then click Done.';
+
+            const pasteBox = document.createElement('div');
+            pasteBox.contentEditable = 'true';
+            pasteBox.className =
+              'w-full min-h-[88px] max-h-40 overflow-y-auto p-3 text-sm font-mono bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 whitespace-pre-wrap';
+
+            pasteBox.addEventListener('paste', (e) => {
+              if (e.clipboardData) {
+                const html = e.clipboardData.getData('text/html');
+                const plain = e.clipboardData.getData('text/plain');
+                if (html) {
+                  e.preventDefault();
+                  const clean = sanitizeRichHtml(html);
+                  pasteBox.innerHTML = clean;
+                  capturedHtml = clean;
+                } else if (plain) {
+                  capturedHtml = plainTextToHtml(plain);
+                }
+              }
+            });
+
+            inputModalBody.appendChild(desc);
+            inputModalBody.appendChild(pasteBox);
+            focusTarget = pasteBox;
+            getResult = () => {
+              const plain = pasteBox.innerText || '';
+              return {
+                plain,
+                html: capturedHtml || sanitizeRichHtml(pasteBox.innerHTML) || plainTextToHtml(plain),
+              };
+            };
+          }
+
+          function cleanup() {
+            inputModalBackdrop.classList.add('hidden');
+            inputModalDoneBtn.removeEventListener('click', onDone);
+            inputModalCancelBtn.removeEventListener('click', onCancel);
+            document.removeEventListener('keydown', onKeyDown);
+          }
+
+          function finish(confirmed) {
+            cleanup();
+            if (!confirmed) {
+              resolve(null);
+            } else {
+              resolve(getResult());
+            }
+          }
+
+          function onDone() {
+            finish(true);
+          }
+
+          function onCancel() {
+            finish(false);
+          }
+
+          function onKeyDown(e) {
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              finish(false);
+            }
+          }
+
+          inputModalDoneBtn.addEventListener('click', onDone);
+          inputModalCancelBtn.addEventListener('click', onCancel);
+          document.addEventListener('keydown', onKeyDown);
+
+          inputModalBackdrop.classList.remove('hidden');
+          if (focusTarget) {
+            setTimeout(() => focusTarget.focus(), 20);
+          }
+        });
+      }
+
+      /**
+       * Resolves `###` (current clipboard) and all `[Text]`, `[Number]`, `[Time]`, `[Options]`
+       * tokens inside a copy block before copying to clipboard.
+       * Returns `{ plain, html }` or `null` if cancelled by the user.
+       */
+      async function resolveCopyBlockContent(item) {
+        let finalPlain = item.text || '';
+        let finalHtml = item.html || plainTextToHtml(finalPlain);
+
+        // 1. Resolve ### (Current Clipboard) if present
+        if (finalPlain.includes('###')) {
+          let clip = await tryReadClipboard();
+          if (!clip) {
+            clip = await promptInputModal(
+              {
+                kind: 'clipboard_fallback',
+                label: 'Paste Current Clipboard (###)',
+                description: 'Browser clipboard access needs a quick paste. Press Ctrl+V / Cmd+V below and click Done.',
+              },
+              0,
+              1
+            );
+            if (!clip) return null; // User cancelled
+          }
+          finalPlain = finalPlain.split('###').join(clip.plain);
+          finalHtml = finalHtml.split('###').join(clip.html);
+        }
+
+        // 2. Resolve interactive [Text], [Number], [Time], [Option 1 / Option 2] tags sequentially
+        const placeholders = findInputPlaceholders(finalPlain);
+        for (let idx = 0; idx < placeholders.length; idx++) {
+          const { token, spec } = placeholders[idx];
+          const answer = await promptInputModal(spec, idx, placeholders.length);
+          if (!answer) {
+            return null; // User cancelled
+          }
+          // Replace first occurrence of this token in both plain and HTML strings
+          const plainIdx = finalPlain.indexOf(token);
+          if (plainIdx !== -1) {
+            finalPlain = finalPlain.slice(0, plainIdx) + answer.plain + finalPlain.slice(plainIdx + token.length);
+          }
+          const escapedToken = escapeHtml(token);
+          const htmlIdx = finalHtml.indexOf(escapedToken);
+          if (htmlIdx !== -1) {
+            finalHtml = finalHtml.slice(0, htmlIdx) + answer.html + finalHtml.slice(htmlIdx + escapedToken.length);
+          } else {
+            const rawHtmlIdx = finalHtml.indexOf(token);
+            if (rawHtmlIdx !== -1) {
+              finalHtml = finalHtml.slice(0, rawHtmlIdx) + answer.html + finalHtml.slice(rawHtmlIdx + token.length);
+            }
+          }
+        }
+
+        // Unescape any \[ or \] literal brackets
+        finalPlain = finalPlain.replace(/\\\[/g, '[').replace(/\\\]/g, ']');
+        finalHtml = finalHtml.replace(/\\\[/g, '[').replace(/\\\]/g, ']');
+
+        return { plain: finalPlain, html: finalHtml };
       }
 
       // =========================================================================
@@ -856,7 +2120,8 @@ Springfield, IL 62704`;
               (item) =>
                 matchesSearch(item.title, query) ||
                 matchesSearch(item.description, query) ||
-                matchesSearch(item.text, query)
+                matchesSearch(item.text, query) ||
+                (item.buttons || []).some((b) => matchesSearch(b.title, query) || matchesSearch(b.hover, query))
             );
 
         const matchedSubfolders = folder.subfolders
@@ -879,10 +2144,6 @@ Springfield, IL 62704`;
       // =========================================================================
       // UI COMPONENT BUILDERS
       // =========================================================================
-
-      /**
-       * Creates a Custom Link Button with sleek hover tooltip support.
-       */
       function createLinkButtonElement(btnData) {
         const wrapper = document.createElement('div');
         wrapper.className = 'relative group inline-flex max-w-full';
@@ -915,7 +2176,6 @@ Springfield, IL 62704`;
         anchor.appendChild(extIcon);
         wrapper.appendChild(anchor);
 
-        // Styled hover tooltip if Hover text is provided
         if (btnData.hover) {
           const tooltip = document.createElement('div');
           tooltip.setAttribute('role', 'tooltip');
@@ -923,7 +2183,6 @@ Springfield, IL 62704`;
             'pointer-events-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 w-max max-w-[240px] px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-normal shadow-lg text-center break-words';
           tooltip.textContent = btnData.hover;
 
-          // Little tooltip pointer triangle
           const arrow = document.createElement('div');
           arrow.className =
             'w-2 h-2 bg-slate-900 dark:bg-slate-100 rotate-45 absolute top-full left-1/2 -translate-x-1/2 -mt-1';
@@ -936,14 +2195,14 @@ Springfield, IL 62704`;
       }
 
       /**
-       * Creates a Copyable Block Card (Title, optional Description, Text preview, Copy button).
+       * Creates a Copyable Block Card (Title, optional Description, formatted Text preview,
+       * embedded Button(s) underneath, and Copy button).
        */
       function createCopyCardElement(item) {
         const card = document.createElement('div');
         card.className =
           'bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl p-3.5 sm:p-4 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-all';
 
-        // Top row: Title + Description + Copy Button
         const topRow = document.createElement('div');
         topRow.className = 'flex items-start justify-between gap-3';
 
@@ -962,7 +2221,6 @@ Springfield, IL 62704`;
           headerInfo.appendChild(descEl);
         }
 
-        // Copy Button
         const defaultBtnClasses = ['bg-slate-900', 'dark:bg-indigo-600', 'hover:bg-slate-800', 'dark:hover:bg-indigo-500'];
         const copiedBtnClasses = ['bg-emerald-600', 'dark:bg-emerald-600', 'hover:bg-emerald-700', 'dark:hover:bg-emerald-500'];
 
@@ -978,8 +2236,14 @@ Springfield, IL 62704`;
         `;
 
         let resetBtnTimer = null;
-        function handleCopy() {
-          const ok = copyTextToClipboard(item.text);
+        async function handleCopy() {
+          const resolved = await resolveCopyBlockContent(item);
+          if (!resolved) {
+            showToast('Copy cancelled');
+            return;
+          }
+
+          const ok = await copyRichToClipboard(resolved.plain, resolved.html);
           if (ok) {
             copyBtn.classList.remove(...defaultBtnClasses);
             copyBtn.classList.add(...copiedBtnClasses);
@@ -1010,26 +2274,35 @@ Springfield, IL 62704`;
         copyBtn.addEventListener('click', handleCopy);
 
         topRow.appendChild(headerInfo);
-        topRow.appendChild(copyBtn);
+        if (item.text || !item.buttons || item.buttons.length === 0) {
+          topRow.appendChild(copyBtn);
+        }
         card.appendChild(topRow);
 
-        // Text Content Preview (clicking the preview also copies for extra speed!)
+        // Formatted Text Preview (renders bold, underline, colors & highlights from Google Drive)
         if (item.text) {
           const textBox = document.createElement('div');
           textBox.title = 'Click to copy';
           textBox.className =
-            'mt-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-950/70 border border-slate-200/70 dark:border-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-200 font-mono whitespace-pre-wrap break-words max-h-48 overflow-y-auto cursor-pointer hover:bg-indigo-50/40 dark:hover:bg-indigo-500/10 hover:border-indigo-200/80 dark:hover:border-indigo-500/40 transition-colors';
-          textBox.textContent = item.text;
+            'rich-preview mt-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-950/70 border border-slate-200/70 dark:border-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-200 font-mono whitespace-pre-wrap break-words max-h-48 overflow-y-auto cursor-pointer hover:bg-indigo-50/40 dark:hover:bg-indigo-500/10 hover:border-indigo-200/80 dark:hover:border-indigo-500/40 transition-colors';
+          textBox.innerHTML = item.html || plainTextToHtml(item.text);
           textBox.addEventListener('click', handleCopy);
           card.appendChild(textBox);
+        }
+
+        // Embedded Buttons inside this Copy Block
+        if (item.buttons && item.buttons.length > 0) {
+          const embeddedRow = document.createElement('div');
+          embeddedRow.className = 'mt-3 flex flex-wrap items-center gap-2';
+          item.buttons.forEach((btnData) => {
+            embeddedRow.appendChild(createLinkButtonElement(btnData));
+          });
+          card.appendChild(embeddedRow);
         }
 
         return card;
       }
 
-      /**
-       * Recursively counts total items and buttons inside a folder subtree for the badge.
-       */
       function countFolderContents(folder) {
         let count = folder.items.length + folder.buttons.length;
         for (const sub of folder.subfolders) {
@@ -1038,9 +2311,6 @@ Springfield, IL 62704`;
         return count;
       }
 
-      /**
-       * Recursively collects every folder ID in a folder tree.
-       */
       function collectAllFolderIds(folders, acc = []) {
         for (const folder of folders) {
           acc.push(folder.id);
@@ -1051,9 +2321,6 @@ Springfield, IL 62704`;
         return acc;
       }
 
-      /**
-       * Updates the Expand All / Collapse All toggle button label and visibility.
-       */
       function updateToggleAllButtonLabel() {
         if (!lastParsedData) return;
         const allIds = collectAllFolderIds(lastParsedData.folders);
@@ -1066,9 +2333,6 @@ Springfield, IL 62704`;
         toggleAllFoldersBtn.textContent = allCollapsed ? 'Expand All' : 'Collapse All';
       }
 
-      /**
-       * Recursively creates a collapsible Folder element (supports arbitrary folder nesting).
-       */
       function createFolderElement(folder, depth) {
         const isCollapsed = !folder.forceOpen && collapsedFolders.has(folder.id);
         const totalCount = countFolderContents(folder);
@@ -1079,7 +2343,6 @@ Springfield, IL 62704`;
             ? 'bg-white/70 dark:bg-slate-900/60 border border-slate-200/90 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm'
             : 'border-l-2 border-slate-200 dark:border-slate-800 pl-3 sm:pl-4 pt-1';
 
-        // Folder Header Toggle Button
         const headerBtn = document.createElement('button');
         headerBtn.type = 'button';
         headerBtn.setAttribute('aria-expanded', String(!isCollapsed));
@@ -1091,7 +2354,6 @@ Springfield, IL 62704`;
         const leftGroup = document.createElement('div');
         leftGroup.className = 'flex items-center gap-2.5 min-w-0';
 
-        // Chevron Arrow
         const chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         chevron.setAttribute(
           'class',
@@ -1103,7 +2365,6 @@ Springfield, IL 62704`;
         chevron.setAttribute('viewBox', '0 0 24 24');
         chevron.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />';
 
-        // Folder Icon
         const folderIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         folderIcon.setAttribute(
           'class',
@@ -1114,7 +2375,6 @@ Springfield, IL 62704`;
         folderIcon.innerHTML =
           '<path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />';
 
-        // Folder Name
         const nameEl = document.createElement('span');
         nameEl.className =
           depth === 0
@@ -1126,7 +2386,6 @@ Springfield, IL 62704`;
         leftGroup.appendChild(folderIcon);
         leftGroup.appendChild(nameEl);
 
-        // Count Badge
         const countBadge = document.createElement('span');
         countBadge.className =
           'text-xs font-medium text-slate-400 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full shrink-0';
@@ -1136,14 +2395,12 @@ Springfield, IL 62704`;
         headerBtn.appendChild(countBadge);
         wrapper.appendChild(headerBtn);
 
-        // Folder Body (Buttons, Items, and Nested Subfolders)
         const body = document.createElement('div');
         body.className =
           depth === 0
             ? `${isCollapsed ? 'hidden' : 'block'} px-3 sm:px-4 pb-4 pt-1 space-y-3 border-t border-slate-100 dark:border-slate-800`
             : `${isCollapsed ? 'hidden' : 'block'} pt-2 pb-1 space-y-2.5`;
 
-        // Buttons inside this folder
         if (folder.buttons.length > 0) {
           const btnRow = document.createElement('div');
           btnRow.className = 'flex flex-wrap gap-2';
@@ -1151,7 +2408,6 @@ Springfield, IL 62704`;
           body.appendChild(btnRow);
         }
 
-        // Copy Items inside this folder
         if (folder.items.length > 0) {
           const itemsList = document.createElement('div');
           itemsList.className = 'space-y-2.5';
@@ -1159,7 +2415,6 @@ Springfield, IL 62704`;
           body.appendChild(itemsList);
         }
 
-        // Nested Subfolders
         if (folder.subfolders.length > 0) {
           const subContainer = document.createElement('div');
           subContainer.className = 'space-y-2.5 pt-1';
@@ -1169,7 +2424,6 @@ Springfield, IL 62704`;
           body.appendChild(subContainer);
         }
 
-        // Empty folder hint
         if (folder.buttons.length === 0 && folder.items.length === 0 && folder.subfolders.length === 0) {
           const emptyNote = document.createElement('p');
           emptyNote.className = 'text-xs text-slate-400 dark:text-slate-500 italic py-1';
@@ -1179,7 +2433,6 @@ Springfield, IL 62704`;
 
         wrapper.appendChild(body);
 
-        // Toggle open/closed state
         headerBtn.addEventListener('click', () => {
           const nowHidden = body.classList.toggle('hidden');
           headerBtn.setAttribute('aria-expanded', String(!nowHidden));
@@ -1202,16 +2455,15 @@ Springfield, IL 62704`;
       // MAIN LIBRARY RENDERER
       // =========================================================================
       function renderLibrary() {
-        const parsed = parseLibraryText(rawTextData);
+        const lineObjects = extractEditorLines(dataEditor);
+        const parsed = parseLibraryLines(lineObjects);
         lastParsedData = parsed;
 
-        // Update footer stats in the Text Data tab
         const { folders: fCount, items: iCount, buttons: bCount } = parsed.stats;
         parseStats.textContent = `${fCount} ${fCount === 1 ? 'folder' : 'folders'} · ${iCount} ${iCount === 1 ? 'copy block' : 'copy blocks'} · ${bCount} ${bCount === 1 ? 'button' : 'buttons'}`;
 
         const query = searchQuery.trim().toLowerCase();
 
-        // Filter root buttons, root items, and folder trees based on search query
         const filteredRootButtons = query
           ? parsed.rootButtons.filter(
               (b) => matchesSearch(b.title, query) || matchesSearch(b.link, query) || matchesSearch(b.hover, query)
@@ -1223,7 +2475,8 @@ Springfield, IL 62704`;
               (item) =>
                 matchesSearch(item.title, query) ||
                 matchesSearch(item.description, query) ||
-                matchesSearch(item.text, query)
+                matchesSearch(item.text, query) ||
+                (item.buttons || []).some((b) => matchesSearch(b.title, query) || matchesSearch(b.hover, query))
             )
           : parsed.rootItems;
 
@@ -1231,7 +2484,6 @@ Springfield, IL 62704`;
           .map((folder) => filterFolderTree(folder, query))
           .filter(Boolean);
 
-        // Render top-level custom link buttons
         rootButtonsList.innerHTML = '';
         if (filteredRootButtons.length > 0) {
           filteredRootButtons.forEach((btn) => rootButtonsList.appendChild(createLinkButtonElement(btn)));
@@ -1240,7 +2492,6 @@ Springfield, IL 62704`;
           rootButtonsContainer.classList.add('hidden');
         }
 
-        // Render top-level copy items (if any exist outside folders)
         rootItemsContainer.innerHTML = '';
         if (filteredRootItems.length > 0) {
           filteredRootItems.forEach((item) => rootItemsContainer.appendChild(createCopyCardElement(item)));
@@ -1249,13 +2500,11 @@ Springfield, IL 62704`;
           rootItemsContainer.classList.add('hidden');
         }
 
-        // Render nested folder tree
         foldersContainer.innerHTML = '';
         filteredFolders.forEach((folder) => {
           foldersContainer.appendChild(createFolderElement(folder, 0));
         });
 
-        // Show empty state if nothing matches or library has no entries
         const hasVisibleContent =
           filteredRootButtons.length > 0 || filteredRootItems.length > 0 || filteredFolders.length > 0;
 
@@ -1309,11 +2558,9 @@ Springfield, IL 62704`;
 
         const isLibrary = normalized === 'library';
 
-        // Update panels visibility
         panelLibrary.classList.toggle('hidden', !isLibrary);
         panelData.classList.toggle('hidden', isLibrary);
 
-        // Update tab button styles
         const activeClasses = ['bg-white', 'dark:bg-slate-700', 'text-slate-900', 'dark:text-white', 'shadow-sm'];
         const inactiveClasses = ['text-slate-500', 'dark:text-slate-400', 'hover:text-slate-800', 'dark:hover:text-slate-200'];
 
@@ -1322,7 +2569,6 @@ Springfield, IL 62704`;
           tabBtnLibrary.classList.remove(...inactiveClasses);
           tabBtnData.classList.remove(...activeClasses);
           tabBtnData.classList.add(...inactiveClasses);
-          // Re-render library in case text data was just edited
           renderLibrary();
         } else {
           tabBtnData.classList.add(...activeClasses);
@@ -1347,11 +2593,45 @@ Springfield, IL 62704`;
         }
       }
 
-      function saveTextData(newText) {
-        rawTextData = newText;
-        storageSet(STORAGE_KEY_DATA, rawTextData);
+      function updateUndoRedoButtons() {
+        undoBtn.disabled = undoStack.length === 0;
+        redoBtn.disabled = redoStack.length === 0;
+      }
 
-        // Subtle live saved indicator
+      function recordHistorySnapshot(previousHtml) {
+        if (previousHtml === undefined || previousHtml === lastCommittedHtml) return;
+        undoStack.push(previousHtml);
+        if (undoStack.length > MAX_HISTORY) {
+          undoStack.shift();
+        }
+        redoStack = [];
+        lastCommittedHtml = dataEditor.innerHTML;
+        updateUndoRedoButtons();
+      }
+
+      function saveEditorState(recordHistory = true) {
+        const currentHtml = dataEditor.innerHTML;
+        if (recordHistory) {
+          if (historyDebounceTimer) clearTimeout(historyDebounceTimer);
+          const beforeHtml = lastCommittedHtml;
+          historyDebounceTimer = setTimeout(() => {
+            if (dataEditor.innerHTML !== beforeHtml) {
+              undoStack.push(beforeHtml);
+              if (undoStack.length > MAX_HISTORY) undoStack.shift();
+              redoStack = [];
+              lastCommittedHtml = dataEditor.innerHTML;
+              updateUndoRedoButtons();
+            }
+          }, 350);
+        }
+
+        const lineObjects = extractEditorLines(dataEditor);
+        rawTextData = lineObjects.map((l) => l.plain).join('\n');
+        rawHtmlData = currentHtml;
+
+        storageSet(STORAGE_KEY_DATA, rawTextData);
+        storageSet(STORAGE_KEY_HTML_DATA, rawHtmlData);
+
         saveStatusText.textContent = 'Saved';
         mobileSaveBadge.classList.remove('opacity-0');
         mobileSaveBadge.classList.add('opacity-100');
@@ -1366,21 +2646,107 @@ Springfield, IL 62704`;
         renderLibrary();
       }
 
-      // =========================================================================
-      // EDITOR QUICK-INSERT HELPERS
-      // =========================================================================
-      function appendTemplateToEditor(templateText) {
-        const current = dataEditor.value;
-        const prefix = current.trim().length === 0 ? '' : current.endsWith('\n\n') ? '' : current.endsWith('\n') ? '\n' : '\n\n';
-        const updated = current + prefix + templateText;
-        dataEditor.value = updated;
-        saveTextData(updated);
+      function performUndo() {
+        if (undoStack.length === 0) return;
+        if (historyDebounceTimer) clearTimeout(historyDebounceTimer);
+        redoStack.push(dataEditor.innerHTML);
+        const prev = undoStack.pop();
+        dataEditor.innerHTML = prev;
+        lastCommittedHtml = prev;
+        updateUndoRedoButtons();
+        saveEditorState(false);
+      }
 
-        // Focus editor and scroll smoothly to bottom
+      function performRedo() {
+        if (redoStack.length === 0) return;
+        if (historyDebounceTimer) clearTimeout(historyDebounceTimer);
+        undoStack.push(dataEditor.innerHTML);
+        const next = redoStack.pop();
+        dataEditor.innerHTML = next;
+        lastCommittedHtml = next;
+        updateUndoRedoButtons();
+        saveEditorState(false);
+      }
+
+      // =========================================================================
+      // RICH PASTE & QUICK-INSERT HELPERS
+      // =========================================================================
+      /**
+       * Inserts sanitized HTML or plain text at the current selection inside `dataEditor`.
+       */
+      function insertHtmlAtSelection(htmlToInsert) {
         dataEditor.focus();
-        dataEditor.selectionStart = updated.length;
-        dataEditor.selectionEnd = updated.length;
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0 || !dataEditor.contains(selection.anchorNode)) {
+          const range = document.createRange();
+          range.selectNodeContents(dataEditor);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+
+        const temp = document.createElement('div');
+        temp.innerHTML = htmlToInsert;
+        const frag = document.createDocumentFragment();
+        let lastNode = null;
+        while (temp.firstChild) {
+          lastNode = frag.appendChild(temp.firstChild);
+        }
+        range.insertNode(frag);
+
+        if (lastNode) {
+          const newRange = document.createRange();
+          newRange.setStartAfter(lastNode);
+          newRange.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+        }
+      }
+
+      /**
+       * Appends an empty template block (with NO dummy data) to the editor
+       * and positions the caret right at the first blank field ready for typing.
+       */
+      function appendEmptyTemplateToEditor(templateText, caretOffsetFromEnd) {
+        const beforeHtml = dataEditor.innerHTML;
+        const currentPlain = extractEditorLines(dataEditor).map((l) => l.plain).join('\n');
+        const prefix =
+          currentPlain.trim().length === 0
+            ? ''
+            : currentPlain.endsWith('\n\n')
+              ? ''
+              : currentPlain.endsWith('\n')
+                ? '\n'
+                : '\n\n';
+
+        const fullSnippet = prefix + templateText;
+        dataEditor.focus();
+
+        // Move selection to end of editor
+        const endRange = document.createRange();
+        endRange.selectNodeContents(dataEditor);
+        endRange.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(endRange);
+
+        const textNode = document.createTextNode(fullSnippet);
+        endRange.insertNode(textNode);
+
+        // Place caret inside the newly inserted textNode at the desired input spot
+        const caretPos = Math.max(0, fullSnippet.length - caretOffsetFromEnd);
+        const caretRange = document.createRange();
+        caretRange.setStart(textNode, caretPos);
+        caretRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(caretRange);
+
         dataEditor.scrollTop = dataEditor.scrollHeight;
+        recordHistorySnapshot(beforeHtml);
+        saveEditorState(false);
       }
 
       // =========================================================================
@@ -1391,7 +2757,6 @@ Springfield, IL 62704`;
       tabBtnData.addEventListener('click', () => setActiveTab('data'));
       goToDataTabBtn.addEventListener('click', () => setActiveTab('data'));
 
-      // Live search
       searchInput.addEventListener('input', (e) => {
         searchQuery = e.target.value;
         clearSearchBtn.classList.toggle('hidden', searchQuery.length === 0);
@@ -1406,7 +2771,6 @@ Springfield, IL 62704`;
         searchInput.focus();
       });
 
-      // Expand / Collapse all folders
       toggleAllFoldersBtn.addEventListener('click', () => {
         if (!lastParsedData) return;
         const allIds = collectAllFolderIds(lastParsedData.folders);
@@ -1422,68 +2786,132 @@ Springfield, IL 62704`;
         renderLibrary();
       });
 
-      // Formatting guide toggle (little down arrow)
+      // Formatting guide toggle
       docsToggleBtn.addEventListener('click', () => {
         const isNowHidden = docsContent.classList.toggle('hidden');
         docsToggleBtn.setAttribute('aria-expanded', String(!isNowHidden));
         docsChevron.classList.toggle('rotate-180', !isNowHidden);
       });
 
-      // Live auto-save as the user types in the Text Data editor
-      dataEditor.addEventListener('input', (e) => {
-        saveTextData(e.target.value);
-      });
+      // Rich Paste interception inside Text Data editor (preserves Google Drive formatting)
+      dataEditor.addEventListener('paste', (e) => {
+        if (!e.clipboardData) return;
+        const html = e.clipboardData.getData('text/html');
+        const plain = e.clipboardData.getData('text/plain');
 
-      // Quick insert templates
-      insertFolderBtn.addEventListener('click', () => {
-        appendTemplateToEditor('# New Folder\n');
-      });
-
-      insertCopyBtn.addEventListener('click', () => {
-        appendTemplateToEditor('[Copy]\nTitle: New Title\nDescription: Optional description\nText:\nText to copy goes here\n');
-      });
-
-      insertButtonBtn.addEventListener('click', () => {
-        appendTemplateToEditor('[Button]\nTitle: Website Name\nLink: https://example.com\nHover: Short description shown on hover\n');
-      });
-
-      // Copy entire Text Data externally for backup
-      copyAllDataBtn.addEventListener('click', () => {
-        const ok = copyTextToClipboard(dataEditor.value);
-        if (ok) {
-          showToast('All text data copied');
-        } else {
-          showToast('Could not copy text data');
+        if (html || plain) {
+          e.preventDefault();
+          const beforeHtml = dataEditor.innerHTML;
+          const cleanHtml = html ? sanitizeRichHtml(html) : plainTextToHtml(plain);
+          insertHtmlAtSelection(cleanHtml);
+          recordHistorySnapshot(beforeHtml);
+          saveEditorState(false);
         }
       });
 
-      // Two-step inline example reset (no confirm() popups)
-      resetDemoBtn.addEventListener('click', () => {
-        resetDemoBtn.classList.add('hidden');
-        resetConfirmGroup.classList.remove('hidden');
-        resetConfirmGroup.classList.add('flex');
+      // Clean Enter key & Ctrl+Z / Ctrl+Y shortcuts inside contenteditable editor
+      dataEditor.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+          const key = e.key.toLowerCase();
+          if (key === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            performUndo();
+            return;
+          }
+          if (key === 'y' || (key === 'z' && e.shiftKey)) {
+            e.preventDefault();
+            performRedo();
+            return;
+          }
+        }
+
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const beforeHtml = dataEditor.innerHTML;
+          insertHtmlAtSelection('\n');
+          recordHistorySnapshot(beforeHtml);
+          saveEditorState(false);
+        }
       });
 
-      cancelResetBtn.addEventListener('click', () => {
-        resetConfirmGroup.classList.add('hidden');
-        resetConfirmGroup.classList.remove('flex');
-        resetDemoBtn.classList.remove('hidden');
+      dataEditor.addEventListener('input', () => {
+        saveEditorState(true);
       });
 
-      confirmResetBtn.addEventListener('click', () => {
-        dataEditor.value = DEFAULT_SAMPLE_DATA;
-        saveTextData(DEFAULT_SAMPLE_DATA);
-        resetConfirmGroup.classList.add('hidden');
-        resetConfirmGroup.classList.remove('flex');
-        resetDemoBtn.classList.remove('hidden');
-        showToast('Example data loaded');
+      // Empty quick-insert templates (zero dummy data, ready to write in immediately)
+      insertFolderBtn.addEventListener('click', () => {
+        // "# \n" -> caret right after "# " (1 char before end)
+        appendEmptyTemplateToEditor('# \n', 1);
+      });
+
+      insertCopyBtn.addEventListener('click', () => {
+        // "[Copy]\nTitle: \nDescription: \nButton: \nText: {\n\n}\n"
+        // Place caret right after "Title: "
+        const tpl = '[Copy]\nTitle: \nDescription: \nButton: \nText: {\n\n}\n';
+        const offsetFromEnd = tpl.length - '[Copy]\nTitle: '.length;
+        appendEmptyTemplateToEditor(tpl, offsetFromEnd);
+      });
+
+      insertButtonBtn.addEventListener('click', () => {
+        // "[Button]\nTitle: \nLink: \nHover: \n"
+        // Place caret right after "Title: "
+        const tpl = '[Button]\nTitle: \nLink: \nHover: \n';
+        const offsetFromEnd = tpl.length - '[Button]\nTitle: '.length;
+        appendEmptyTemplateToEditor(tpl, offsetFromEnd);
+      });
+
+      // Undo & Redo buttons
+      undoBtn.addEventListener('click', performUndo);
+      redoBtn.addEventListener('click', performRedo);
+
+      // Paste button in Text Data toolbar
+      pasteDataBtn.addEventListener('click', async () => {
+        const clip = await tryReadClipboard();
+        if (clip) {
+          const beforeHtml = dataEditor.innerHTML;
+          insertHtmlAtSelection(clip.html);
+          recordHistorySnapshot(beforeHtml);
+          saveEditorState(false);
+          showToast('Pasted from clipboard');
+          return;
+        }
+
+        // Fallback modal if browser/iframe blocks direct clipboard read permission
+        const manualClip = await promptInputModal(
+          {
+            kind: 'clipboard_fallback',
+            label: 'Paste Text Data',
+            description: 'Press Ctrl+V (or Cmd+V) in the box below to paste with formatting, then click Done.',
+          },
+          0,
+          1
+        );
+        if (manualClip) {
+          const beforeHtml = dataEditor.innerHTML;
+          insertHtmlAtSelection(manualClip.html);
+          recordHistorySnapshot(beforeHtml);
+          saveEditorState(false);
+          showToast('Pasted into Text Data');
+        }
+      });
+
+      // Copy button in Text Data toolbar (copies full formatted rich text + plain text)
+      copyAllDataBtn.addEventListener('click', async () => {
+        const lineObjects = extractEditorLines(dataEditor);
+        const plain = lineObjects.map((l) => l.plain).join('\n');
+        const html = lineObjects.map((l) => l.html).join('<br>');
+        const ok = await copyRichToClipboard(plain, html);
+        if (ok) {
+          showToast('Text data copied');
+        } else {
+          showToast('Could not copy text data');
+        }
       });
 
       // =========================================================================
       // INITIALIZATION ON PAGE LOAD
       // =========================================================================
       function init() {
-        // 0. Sync dark mode toggle label and listen for OS theme changes if user hasn't picked manually
         updateThemeButtonAccessibility();
         if (window.matchMedia) {
           const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -1497,12 +2925,25 @@ Springfield, IL 62704`;
           }
         }
 
-        // 1. Restore saved text data (or load friendly starter example on first visit)
-        const savedData = storageGet(STORAGE_KEY_DATA);
-        rawTextData = savedData !== null ? savedData : DEFAULT_SAMPLE_DATA;
-        dataEditor.value = rawTextData;
+        // Restore saved rich HTML data (or plain text fallback, or starter example on first visit)
+        const savedHtml = storageGet(STORAGE_KEY_HTML_DATA);
+        const savedPlain = storageGet(STORAGE_KEY_DATA);
 
-        // 2. Restore collapsed folder states
+        if (savedHtml !== null) {
+          rawHtmlData = savedHtml;
+          dataEditor.innerHTML = rawHtmlData;
+        } else if (savedPlain !== null) {
+          rawTextData = savedPlain;
+          dataEditor.innerHTML = plainTextToHtml(rawTextData);
+        } else {
+          rawTextData = DEFAULT_SAMPLE_DATA;
+          dataEditor.innerHTML = plainTextToHtml(DEFAULT_SAMPLE_DATA);
+        }
+
+        lastCommittedHtml = dataEditor.innerHTML;
+        updateUndoRedoButtons();
+
+        // Restore collapsed folder states
         const savedCollapsed = storageGet(STORAGE_KEY_COLLAPSED);
         if (savedCollapsed) {
           try {
@@ -1515,7 +2956,6 @@ Springfield, IL 62704`;
           }
         }
 
-        // 3. Restore last active tab; default to 'library' (Copy / Paste Library) if none saved
         const savedTab = storageGet(STORAGE_KEY_TAB);
         const initialTab = savedTab === 'data' ? 'data' : 'library';
 
