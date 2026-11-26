@@ -71,6 +71,10 @@
     #dataEditor s, #dataEditor strike, .rich-preview s, .rich-preview strike {
       text-decoration: line-through;
     }
+    #dataEditor span[style*="background-color"], .rich-preview span[style*="background-color"] {
+      border-radius: 3px;
+      padding: 0 2px;
+    }
 
     /* Restore visible bullet points and nested hierarchy (overriding Tailwind Preflight reset) */
     #dataEditor ul, .rich-preview ul {
@@ -353,7 +357,7 @@
             <button
               id="pasteDataBtn"
               type="button"
-              title="Paste from clipboard (preserves Google Drive formatting)"
+              title="Replace all Text Data with clipboard (preserves Google Drive formatting)"
               class="px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg active:scale-[0.98] transition-all flex items-center gap-1.5"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
@@ -703,16 +707,106 @@ Text: {"###"}`;
         return 'https://' + trimmed;
       }
 
-      function isTransparentColor(color) {
-        if (!color) return true;
-        const c = color.replace(/\s+/g, '').toLowerCase();
-        return c === 'transparent' || c === 'rgba(0,0,0,0)' || c === 'inherit' || c === 'initial' || c === 'none';
+      function normalizeCssColor(color) {
+        return String(color || '').replace(/\s+/g, '').toLowerCase();
       }
 
-      function isDefaultBlackColor(color) {
-        if (!color) return true;
-        const c = color.replace(/\s+/g, '').toLowerCase();
-        return c === '#000' || c === '#000000' || c === 'rgb(0,0,0)' || c === 'black' || c === 'windowtext';
+      /**
+       * Ignores transparent, white, pure black, and this app's light/dark UI background colors
+       * so pasted/edited text never leaks a black or dark-slate background into Google Docs.
+       */
+      function isIgnoredBgColor(color) {
+        const c = normalizeCssColor(color);
+        if (!c) return true;
+        const ignored = new Set([
+          'transparent',
+          'rgba(0,0,0,0)',
+          'inherit',
+          'initial',
+          'unset',
+          'none',
+          '#fff',
+          '#ffffff',
+          'rgb(255,255,255)',
+          'white',
+          '#000',
+          '#000000',
+          'rgb(0,0,0)',
+          'black',
+          // App Tailwind light/dark surfaces (slate-50, slate-800, slate-900, slate-950)
+          '#f8fafc',
+          'rgb(248,250,252)',
+          '#1e293b',
+          'rgb(30,41,59)',
+          '#0f172a',
+          'rgb(15,23,42)',
+          '#020617',
+          'rgb(2,6,23)',
+        ]);
+        return ignored.has(c);
+      }
+
+      /**
+       * Ignores default black/dark-mode UI text colors unless paired with an intentional highlight,
+       * so unformatted text inherits Google Docs' default text style cleanly.
+       */
+      function isIgnoredTextColor(color, hasHighlight) {
+        const c = normalizeCssColor(color);
+        if (!c) return true;
+        if (c === 'inherit' || c === 'initial' || c === 'unset' || c === 'windowtext') return true;
+        if (!hasHighlight) {
+          const defaultUiText = new Set([
+            '#000',
+            '#000000',
+            'rgb(0,0,0)',
+            'black',
+            '#fff',
+            '#ffffff',
+            'rgb(255,255,255)',
+            'white',
+            // App Tailwind default text colors (slate-100, slate-200, slate-800, slate-900)
+            '#f1f5f9',
+            'rgb(241,245,249)',
+            '#e2e8f0',
+            'rgb(226,232,240)',
+            '#f8fafc',
+            'rgb(248,250,252)',
+            '#1e293b',
+            'rgb(30,41,59)',
+            '#0f172a',
+            'rgb(15,23,42)',
+          ]);
+          return defaultUiText.has(c);
+        }
+        return false;
+      }
+
+      /**
+       * Extracts ONLY intentional color and highlight styles from an element,
+       * stripping font-family, font-size, line-height, padding, and page background colors.
+       */
+      function extractIntentionalInlineStyle(node) {
+        const styleAttr = node.style || {};
+        const bgColor = (styleAttr.backgroundColor || '').trim();
+        const textColor = (styleAttr.color || (node.getAttribute && node.getAttribute('color')) || '').trim();
+
+        const styles = [];
+        const hasHighlight = !isIgnoredBgColor(bgColor);
+        if (hasHighlight) {
+          styles.push(`background-color: ${bgColor}`);
+        }
+        if (textColor && !isIgnoredTextColor(textColor, hasHighlight)) {
+          styles.push(`color: ${textColor}`);
+        }
+        return styles.join('; ');
+      }
+
+      /**
+       * Returns true only when HTML contains actual rich formatting (bold, italic, underline,
+       * strikethrough, color/highlight spans, or bullet/numbered lists).
+       */
+      function hasRichFormatting(html) {
+        return /<(b|strong|i|em|u|s|strike|del|span|ul|ol|li)\b/i.test(html || '');
       }
 
       // =========================================================================
@@ -794,6 +888,7 @@ Text: {"###"}`;
         doc.querySelectorAll('script, style, meta, link, iframe, object, embed, head, title').forEach((el) => el.remove());
 
         const BLOCK_TAGS = new Set(['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE', 'TR']);
+        const STRUCTURAL_TAGS = new Set([...BLOCK_TAGS, 'UL', 'OL', 'LI', 'BR', 'TABLE', 'TBODY', 'THEAD']);
         const SAFE_LIST_STYLES = new Set([
           'disc',
           'circle',
@@ -804,6 +899,10 @@ Text: {"###"}`;
           'lower-roman',
           'upper-roman',
         ]);
+
+        function isStructuralEl(node) {
+          return Boolean(node && node.nodeType === Node.ELEMENT_NODE && STRUCTURAL_TAGS.has(node.tagName.toUpperCase()));
+        }
 
         function getSafeListStyle(node, listType, depth) {
           const raw = ((node.style && node.style.listStyleType) || '').trim().toLowerCase();
@@ -816,14 +915,41 @@ Text: {"###"}`;
           return ulOrder[(Math.max(1, depth) - 1) % ulOrder.length];
         }
 
-        function serializeNode(node, isLastSibling, listDepth, parentListType, insideLi) {
+        function isIgnorableWhitespaceNode(node, inPre) {
+          if (!node || node.nodeType !== Node.TEXT_NODE || inPre) return false;
+          const val = node.nodeValue || '';
+          if (val.trim() !== '') return false;
+          // Ignore pretty-printed HTML source newlines/indentation between or around block elements
+          if (/[\r\n]/.test(val)) return true;
+          const prev = node.previousSibling;
+          const next = node.nextSibling;
+          if ((!prev || isStructuralEl(prev)) && (!next || isStructuralEl(next))) return true;
+          return false;
+        }
+
+        function serializeChildren(parentNode, listDepth, parentListType, insideLi, inPre) {
+          const meaningful = Array.from(parentNode.childNodes).filter((c) => !isIgnorableWhitespaceNode(c, inPre));
+          let inner = '';
+          for (let i = 0; i < meaningful.length; i++) {
+            const child = meaningful[i];
+            const nextMeaningful = meaningful[i + 1] || null;
+            inner += serializeNode(child, nextMeaningful, listDepth, parentListType, insideLi, inPre);
+          }
+          return inner;
+        }
+
+        function serializeNode(node, nextMeaningfulSibling, listDepth, parentListType, insideLi, inPre) {
           if (node.nodeType === Node.TEXT_NODE) {
             const val = node.nodeValue || '';
-            // Ignore formatting whitespace between <ul>/<ol>/<li> tags in pasted HTML
             if (listDepth > 0 && !insideLi && val.trim() === '') {
               return '';
             }
-            return escapeHtml(val.replace(/\r\n/g, '\n').replace(/\r/g, '\n')).replace(/\n/g, '<br>');
+            if (inPre) {
+              return escapeHtml(val.replace(/\r\n/g, '\n').replace(/\r/g, '\n')).replace(/\n/g, '<br>');
+            }
+            // In regular HTML, raw source newlines inside text nodes are soft spaces, not <br> tags
+            const normalized = val.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n+/g, ' ');
+            return escapeHtml(normalized);
           }
 
           if (node.nodeType !== Node.ELEMENT_NODE) {
@@ -839,11 +965,7 @@ Text: {"###"}`;
           if (tag === 'UL' || tag === 'OL') {
             const listType = tag.toLowerCase();
             const nextDepth = listDepth + 1;
-            const childNodes = Array.from(node.childNodes);
-            let inner = '';
-            childNodes.forEach((child, idx) => {
-              inner += serializeNode(child, idx === childNodes.length - 1, nextDepth, listType, false);
-            });
+            const inner = serializeChildren(node, nextDepth, listType, false, inPre);
             if (!inner.trim()) return '';
             return `<${listType}>${inner}</${listType}>`;
           }
@@ -853,27 +975,18 @@ Text: {"###"}`;
             const parsedAria = parseInt(node.getAttribute('aria-level'), 10);
             const level = !isNaN(parsedAria) && parsedAria > 0 ? parsedAria : Math.max(1, listDepth);
             const styleType = getSafeListStyle(node, parentListType || 'ul', level);
-            const childNodes = Array.from(node.childNodes);
-            let inner = '';
-            childNodes.forEach((child, idx) => {
-              inner += serializeNode(child, idx === childNodes.length - 1, level, parentListType || 'ul', true);
-            });
+            const inner = serializeChildren(node, level, parentListType || 'ul', true, inPre);
             return `<li aria-level="${level}" style="list-style-type: ${styleType};">${inner}</li>`;
           }
 
-          const childNodes = Array.from(node.childNodes);
-          let inner = '';
-          childNodes.forEach((child, idx) => {
-            inner += serializeNode(child, idx === childNodes.length - 1, listDepth, parentListType, insideLi);
-          });
+          const childInPre = inPre || tag === 'PRE';
+          const inner = serializeChildren(node, listDepth, parentListType, insideLi, childInPre);
 
           // Google Docs often wraps entire clipboard pastes in <b style="font-weight:normal">
           const styleAttr = node.style || {};
           const fontWeight = (styleAttr.fontWeight || '').toLowerCase();
           const fontStyle = (styleAttr.fontStyle || '').toLowerCase();
           const textDec = ((styleAttr.textDecoration || '') + ' ' + (styleAttr.textDecorationLine || '')).toLowerCase();
-          const bgColor = (styleAttr.backgroundColor || '').trim();
-          const textColor = (styleAttr.color || node.getAttribute('color') || '').trim();
 
           let isBold = (tag === 'B' || tag === 'STRONG') && fontWeight !== 'normal' && fontWeight !== '400';
           if (fontWeight === 'bold' || fontWeight === 'bolder' || parseInt(fontWeight, 10) >= 600) {
@@ -883,31 +996,21 @@ Text: {"###"}`;
           const isItalic = tag === 'I' || tag === 'EM' || fontStyle === 'italic';
           const isUnderline = tag === 'U' || textDec.includes('underline');
           const isStrike = tag === 'S' || tag === 'STRIKE' || tag === 'DEL' || textDec.includes('line-through');
-
-          const styles = [];
-          const hasHighlight = !isTransparentColor(bgColor);
-          if (hasHighlight) {
-            styles.push(`background-color: ${bgColor}`);
-            styles.push('border-radius: 3px');
-            styles.push('padding: 0 2px');
-          }
-          if (textColor && (!isDefaultBlackColor(textColor) || hasHighlight)) {
-            styles.push(`color: ${textColor}`);
-          }
+          const intentionalStyle = extractIntentionalInlineStyle(node);
 
           let wrapped = inner;
           if (isBold && wrapped) wrapped = `<b>${wrapped}</b>`;
           if (isItalic && wrapped) wrapped = `<i>${wrapped}</i>`;
           if (isUnderline && wrapped) wrapped = `<u>${wrapped}</u>`;
           if (isStrike && wrapped) wrapped = `<s>${wrapped}</s>`;
-          if (styles.length > 0 && wrapped) {
-            wrapped = `<span style="${escapeHtml(styles.join('; '))}">${wrapped}</span>`;
+          if (intentionalStyle && wrapped) {
+            wrapped = `<span style="${escapeHtml(intentionalStyle)}">${wrapped}</span>`;
           }
 
-          if (BLOCK_TAGS.has(tag) && !isLastSibling) {
-            // Inside <li>, skip trailing <br> if next sibling is a nested list
-            const nextSibling = node.nextElementSibling;
-            const nextIsList = nextSibling && (nextSibling.tagName === 'UL' || nextSibling.tagName === 'OL');
+          if (BLOCK_TAGS.has(tag) && nextMeaningfulSibling) {
+            const nextIsList =
+              nextMeaningfulSibling.nodeType === Node.ELEMENT_NODE &&
+              (nextMeaningfulSibling.tagName === 'UL' || nextMeaningfulSibling.tagName === 'OL');
             if (!nextIsList && !wrapped.endsWith('<br>')) {
               wrapped += '<br>';
             }
@@ -916,13 +1019,7 @@ Text: {"###"}`;
           return wrapped;
         }
 
-        const bodyChildren = Array.from(doc.body.childNodes);
-        let output = '';
-        bodyChildren.forEach((child, idx) => {
-          output += serializeNode(child, idx === bodyChildren.length - 1, 0, null, false);
-        });
-
-        return output;
+        return serializeChildren(doc.body, 0, null, false, false);
       }
 
       /**
@@ -972,7 +1069,7 @@ Text: {"###"}`;
 
         const BLOCK_TAGS = new Set(['DIV', 'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE']);
 
-        function walk(node, isFirstChildInParent) {
+        function walk(node, isLastInBlock) {
           if (node.nodeType === Node.TEXT_NODE) {
             const val = node.nodeValue || '';
             // Skip stray whitespace text nodes directly inside <ul>/<ol>
@@ -986,6 +1083,10 @@ Text: {"###"}`;
 
           const tag = node.tagName.toUpperCase();
           if (tag === 'BR') {
+            // Ignore browser-inserted trailing sentinel <br> at the end of a non-empty block/<li>
+            if (isLastInBlock && hasCurrentContent) {
+              return;
+            }
             pushLine(true);
             return;
           }
@@ -996,7 +1097,7 @@ Text: {"###"}`;
             }
             listStack.push(tag.toLowerCase());
             const children = Array.from(node.childNodes);
-            children.forEach((child, idx) => walk(child, idx === 0));
+            children.forEach((child, idx) => walk(child, idx === children.length - 1));
             listStack.pop();
             return;
           }
@@ -1019,13 +1120,14 @@ Text: {"###"}`;
 
             const children = Array.from(node.childNodes);
             children.forEach((child, idx) => {
+              const isLast = idx === children.length - 1;
               if (child.nodeType === Node.ELEMENT_NODE && (child.tagName === 'UL' || child.tagName === 'OL')) {
                 if (hasCurrentContent || currentListMeta) {
                   pushLine(false);
                 }
-                walk(child, idx === 0);
+                walk(child, isLast);
               } else {
-                walk(child, idx === 0);
+                walk(child, isLast);
               }
             });
 
@@ -1036,36 +1138,52 @@ Text: {"###"}`;
           }
 
           const isBlock = BLOCK_TAGS.has(tag);
-          if (isBlock && !isFirstChildInParent && (hasCurrentContent || lines.length > 0)) {
-            if (!currentListMeta) {
-              pushLine(true);
+          if (isBlock) {
+            // Flush any pending inline content before starting a new block line
+            if (hasCurrentContent && !currentListMeta) {
+              pushLine(false);
             }
+
+            const children = Array.from(node.childNodes);
+            const isEmptyBlock =
+              children.length === 0 || (children.length === 1 && children[0].nodeName === 'BR');
+
+            if (isEmptyBlock) {
+              if (!currentListMeta) {
+                pushLine(true);
+              }
+              return;
+            }
+
+            children.forEach((child, idx) => walk(child, idx === children.length - 1));
+
+            // Flush block's content cleanly at block exit so consecutive <div>/<p> blocks never double-space
+            if (hasCurrentContent && !currentListMeta) {
+              pushLine(false);
+            }
+            return;
           }
 
-          // Determine if this inline element carries formatting we want to keep
+          // Determine if this inline element carries intentional formatting we want to keep
           let tagPair = null;
-          if (!isBlock) {
-            if (tag === 'B' || tag === 'STRONG') {
+          if (tag === 'B' || tag === 'STRONG') {
+            const fw = ((node.style && node.style.fontWeight) || '').toLowerCase();
+            if (fw !== 'normal' && fw !== '400') {
               tagPair = { open: '<b>', close: '</b>' };
-            } else if (tag === 'I' || tag === 'EM') {
-              tagPair = { open: '<i>', close: '</i>' };
-            } else if (tag === 'U') {
-              tagPair = { open: '<u>', close: '</u>' };
-            } else if (tag === 'S' || tag === 'STRIKE' || tag === 'DEL') {
-              tagPair = { open: '<s>', close: '</s>' };
-            } else if (tag === 'SPAN' || tag === 'FONT') {
-              const style = node.getAttribute('style') || '';
-              const colorAttr = node.getAttribute('color');
-              let finalStyle = style;
-              if (!finalStyle && colorAttr) {
-                finalStyle = `color: ${colorAttr}`;
-              }
-              if (finalStyle.trim()) {
-                tagPair = {
-                  open: `<span style="${escapeHtml(finalStyle)}">`,
-                  close: '</span>',
-                };
-              }
+            }
+          } else if (tag === 'I' || tag === 'EM') {
+            tagPair = { open: '<i>', close: '</i>' };
+          } else if (tag === 'U') {
+            tagPair = { open: '<u>', close: '</u>' };
+          } else if (tag === 'S' || tag === 'STRIKE' || tag === 'DEL') {
+            tagPair = { open: '<s>', close: '</s>' };
+          } else if (tag === 'SPAN' || tag === 'FONT') {
+            const cleanStyle = extractIntentionalInlineStyle(node);
+            if (cleanStyle) {
+              tagPair = {
+                open: `<span style="${escapeHtml(cleanStyle)}">`,
+                close: '</span>',
+              };
             }
           }
 
@@ -1075,13 +1193,7 @@ Text: {"###"}`;
           }
 
           const children = Array.from(node.childNodes);
-          if (isBlock && children.length === 1 && children[0].nodeName === 'BR') {
-            if (isFirstChildInParent && !currentListMeta) {
-              pushLine(true);
-            }
-          } else {
-            children.forEach((child, idx) => walk(child, idx === 0));
-          }
+          children.forEach((child, idx) => walk(child, isLastInBlock && idx === children.length - 1));
 
           if (tagPair) {
             activeTags.pop();
@@ -1090,7 +1202,7 @@ Text: {"###"}`;
         }
 
         const topChildren = Array.from(containerEl.childNodes);
-        topChildren.forEach((child, idx) => walk(child, idx === 0));
+        topChildren.forEach((child, idx) => walk(child, idx === topChildren.length - 1));
         if (hasCurrentContent || currentListMeta || lines.length === 0) {
           pushLine(true);
         }
@@ -1627,17 +1739,70 @@ Text: {"###"}`;
       // =========================================================================
 
       /**
-       * Copies both rich HTML (Google Docs compatible) and plain text to the clipboard.
-       * Falls back to hidden contenteditable selection + execCommand('copy') for iframe safety.
+       * Copies clean unformatted plain text when no rich formatting is present (so Google Docs
+       * applies its own default style with zero background color), or copies both clean rich HTML
+       * and plain text when bold/underline/color/highlight/bullets are used.
+       * Uses a copy-event interceptor fallback so mobile & desktop browsers never inject page styles
+       * or extra spacing.
        */
       async function copyRichToClipboard(plainText, richHtml) {
-        const htmlToCopy = richHtml || plainTextToHtml(plainText);
+        const cleanPlain = String(plainText || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        const isRich = Boolean(richHtml && hasRichFormatting(richHtml));
 
-        // Try modern ClipboardItem API first
+        // 1. Plain unformatted text path: write ONLY text/plain so Google Docs uses default formatting
+        if (!isRich) {
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            try {
+              await navigator.clipboard.writeText(cleanPlain);
+              return true;
+            } catch (err) {
+              // Fall through to execCommand fallback
+            }
+          }
+
+          try {
+            let intercepted = false;
+            const onCopy = (e) => {
+              if (!e.clipboardData) return;
+              e.preventDefault();
+              e.clipboardData.setData('text/plain', cleanPlain);
+              intercepted = true;
+            };
+            document.addEventListener('copy', onCopy, true);
+
+            const ta = document.createElement('textarea');
+            ta.value = cleanPlain;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.top = '0';
+            ta.style.left = '0';
+            ta.style.width = '2em';
+            ta.style.height = '2em';
+            ta.style.opacity = '0';
+            ta.style.fontSize = '16px';
+            ta.style.pointerEvents = 'none';
+            document.body.appendChild(ta);
+
+            ta.focus({ preventScroll: true });
+            ta.select();
+            ta.setSelectionRange(0, ta.value.length);
+            const ok = document.execCommand('copy');
+
+            document.removeEventListener('copy', onCopy, true);
+            document.body.removeChild(ta);
+            return ok || intercepted;
+          } catch (err) {
+            return false;
+          }
+        }
+
+        // 2. Rich formatted text path (bold, underline, colors, highlights, or bullet hierarchy)
+        const htmlToCopy = richHtml;
+
         if (navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof ClipboardItem !== 'undefined') {
           try {
             const htmlBlob = new Blob([htmlToCopy], { type: 'text/html' });
-            const textBlob = new Blob([plainText], { type: 'text/plain' });
+            const textBlob = new Blob([cleanPlain], { type: 'text/plain' });
             await navigator.clipboard.write([
               new ClipboardItem({
                 'text/html': htmlBlob,
@@ -1646,44 +1811,61 @@ Text: {"###"}`;
             ]);
             return true;
           } catch (err) {
-            // Fall through to execCommand fallback
+            // Fall through to copy-event interceptor fallback
           }
         }
 
-        // Reliable rich-copy fallback via off-screen contenteditable element
+        // Fallback via copy-event interceptor: writes exact clean HTML/plain without dark-mode page styles
         try {
-          const temp = document.createElement('div');
-          temp.contentEditable = 'true';
-          temp.style.position = 'fixed';
-          temp.style.left = '-9999px';
-          temp.style.top = '0';
-          temp.style.opacity = '0';
-          temp.innerHTML = htmlToCopy;
-          document.body.appendChild(temp);
+          let intercepted = false;
+          const onCopy = (e) => {
+            if (!e.clipboardData) return;
+            e.preventDefault();
+            e.clipboardData.setData('text/html', htmlToCopy);
+            e.clipboardData.setData('text/plain', cleanPlain);
+            intercepted = true;
+          };
+          document.addEventListener('copy', onCopy, true);
 
-          const range = document.createRange();
-          range.selectNodeContents(temp);
-          const selection = window.getSelection();
-          selection.removeAllRanges();
-          selection.addRange(range);
+          const ta = document.createElement('textarea');
+          ta.value = cleanPlain || ' ';
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.top = '0';
+          ta.style.left = '0';
+          ta.style.width = '2em';
+          ta.style.height = '2em';
+          ta.style.opacity = '0';
+          ta.style.fontSize = '16px';
+          ta.style.pointerEvents = 'none';
+          document.body.appendChild(ta);
 
-          const success = document.execCommand('copy');
-          selection.removeAllRanges();
-          document.body.removeChild(temp);
+          ta.focus({ preventScroll: true });
+          ta.select();
+          ta.setSelectionRange(0, ta.value.length);
+          const ok = document.execCommand('copy');
 
-          if (success) return true;
+          document.removeEventListener('copy', onCopy, true);
+          document.body.removeChild(ta);
+
+          if (ok || intercepted) return true;
         } catch (err) {
-          // Fall through to plain-text textarea fallback
+          // Final fallback below
         }
 
-        // Final plain-text fallback
         try {
           const ta = document.createElement('textarea');
-          ta.value = plainText;
+          ta.value = cleanPlain;
+          ta.setAttribute('readonly', '');
           ta.style.position = 'fixed';
-          ta.style.left = '-9999px';
+          ta.style.top = '0';
+          ta.style.left = '0';
+          ta.style.opacity = '0';
+          ta.style.fontSize = '16px';
           document.body.appendChild(ta);
+          ta.focus({ preventScroll: true });
           ta.select();
+          ta.setSelectionRange(0, ta.value.length);
           const ok = document.execCommand('copy');
           document.body.removeChild(ta);
           return ok;
@@ -2149,7 +2331,7 @@ Text: {"###"}`;
             info.className = 'text-xs sm:text-sm text-slate-500 dark:text-slate-400';
             info.textContent =
               spec.kind === 'editor_paste_fallback'
-                ? 'Press Ctrl+V (or Cmd+V) in the box below to paste with Google Drive formatting preserved, then click Done.'
+                ? 'Press Ctrl+V (or Cmd+V) in the box below to replace all Text Data with your clipboard (Google Drive formatting preserved), then click Done.'
                 : 'Your browser blocked direct clipboard reading. Paste your clipboard below (Ctrl+V / Cmd+V), then click Done.';
             inputModalBody.appendChild(info);
 
@@ -2987,27 +3169,27 @@ Text: {"###"}`;
         }
       });
 
-      // Paste button in Text Data toolbar (pastes rich Google Drive/Docs content into editor)
+      // Paste button in Text Data toolbar (clears Text Data and replaces it with clipboard content)
       pasteDataBtn.addEventListener('click', async () => {
         const clip = await readCurrentClipboard();
         if (clip !== null) {
           const beforeHtml = dataEditor.innerHTML;
-          insertHtmlAtSelection(clip.html || plainTextToHtml(clip.plain));
+          dataEditor.innerHTML = clip.html || plainTextToHtml(clip.plain);
           recordHistorySnapshot(beforeHtml);
           saveEditorState(false);
-          showToast('Pasted into Text Data');
+          showToast('Replaced Text Data with clipboard');
         } else {
           const fallback = await openInputModal(
-            { kind: 'editor_paste_fallback', label: 'Paste Formatted Data' },
+            { kind: 'editor_paste_fallback', label: 'Replace Text Data' },
             0,
             1
           );
           if (fallback) {
             const beforeHtml = dataEditor.innerHTML;
-            insertHtmlAtSelection(fallback.html || plainTextToHtml(fallback.plain));
+            dataEditor.innerHTML = fallback.html || plainTextToHtml(fallback.plain);
             recordHistorySnapshot(beforeHtml);
             saveEditorState(false);
-            showToast('Pasted into Text Data');
+            showToast('Replaced Text Data with clipboard');
           }
         }
       });
